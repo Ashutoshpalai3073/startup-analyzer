@@ -183,21 +183,19 @@ export default function LandingPage({ onAnalyze, error }) {
         perspective:"1200px",
       }}>
         {/* Floating 3D cubes — hidden on mobile to avoid overlap */}
-        {!isMobile && !isTablet && (
-          <>
-            <div style={{ position:"absolute", top:60, left:"8%", animation:"float 6s ease-in-out infinite", zIndex:2 }}>
-              <Cube3D size={isTablet ? 35 : 50} color="#6366f1" delay={0} />
-            </div>
-            <div style={{ position:"absolute", top:120, right:"10%", animation:"float 8s ease-in-out infinite 1s", zIndex:2 }}>
-              <Cube3D size={isTablet ? 25 : 35} color="#8b5cf6" delay={2} />
-            </div>
-            {!isTablet && (
-              <div style={{ position:"absolute", bottom:100, left:"15%", animation:"float 7s ease-in-out infinite 0.5s", zIndex:2 }}>
-                <Cube3D size={25} color="#06b6d4" delay={1} />
-              </div>
-            )}
-          </>
-        )}
+        <>
+  <div style={{ position:"absolute", top:60, left:"8%", animation:"float 6s ease-in-out infinite", zIndex:2 }}>
+    <Cube3D size={isMobile ? 25 : isTablet ? 35 : 50} color="#6366f1" delay={0} />
+  </div>
+  <div style={{ position:"absolute", top:120, right:"10%", animation:"float 8s ease-in-out infinite 1s", zIndex:2 }}>
+    <Cube3D size={isMobile ? 18 : isTablet ? 25 : 35} color="#8b5cf6" delay={2} />
+  </div>
+  {!isMobile && (
+    <div style={{ position:"absolute", bottom:100, left:"15%", animation:"float 7s ease-in-out infinite 0.5s", zIndex:2 }}>
+      <Cube3D size={isTablet ? 20 : 25} color="#06b6d4" delay={1} />
+    </div>
+  )}
+</>
 
         {/* Badge */}
         <motion.div
