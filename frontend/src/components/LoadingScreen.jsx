@@ -10,7 +10,7 @@ const STEPS = [
   { icon:"→", label:"GTM Strategist",             desc:"Crafting 5-phase go-to-market roadmap...",          color:"#f59e0b" },
 ];
 
-export default function LoadingScreen({ idea }) {
+export default function LoadingScreen({ idea, onComplete }) {
   const width    = useWindowWidth();
   const isMobile = width < 640;
 
@@ -25,8 +25,14 @@ export default function LoadingScreen({ idea }) {
 
   useEffect(() => {
     const t = setInterval(() => {
-      setCurrent(c => c < STEPS.length - 1 ? c + 1 : c);
-    }, 18000);
+  setCurrent(c => {
+    const next = c < STEPS.length - 1 ? c + 1 : c;
+    if (next === STEPS.length - 1) {
+      setTimeout(() => onComplete?.(), 1200);
+    }
+    return next;
+  });
+}, 18000);
     return () => clearInterval(t);
   }, []);
 

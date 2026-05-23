@@ -27,7 +27,7 @@ export default function App() {
       }
       const data = await res.json();
       setAnalysis(data);
-      setStage("dashboard");
+      setStage("waiting");
     } catch (e) {
       setError(e.message);
       setStage("landing");
@@ -57,7 +57,9 @@ export default function App() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", minHeight: "100vh", background: "#050510" }}>
       {stage === "landing"   && <LandingPage onAnalyze={handleAnalyze} error={error} />}
-      {stage === "loading"   && <LoadingScreen idea={idea} />}
+      {(stage === "loading" || stage === "waiting") && (
+  <LoadingScreen idea={idea} onComplete={() => stage === "waiting" && setStage("dashboard")} />
+)}
       {stage === "dashboard" && (
         <Dashboard analysis={analysis} onDownload={handleDownload} onReset={() => setStage("landing")} />
       )}
