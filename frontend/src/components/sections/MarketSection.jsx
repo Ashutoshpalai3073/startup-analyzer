@@ -1,6 +1,7 @@
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { motion } from "framer-motion";
 import Card from "./Card";
+import { useWindowWidth } from "../../useWindowWidth";
 
 const COLORS = ["#6366f1","#8b5cf6","#06b6d4"];
 
@@ -25,6 +26,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function MarketSection({ data={} }) {
+  const width    = useWindowWidth();
+  const isMobile = width < 640;
+  const isTablet = width < 1024;
+
   if (!data || !Object.keys(data).length) return <Empty />;
 
   const tam = data.tam?.value || 0;
@@ -51,12 +56,16 @@ export default function MarketSection({ data={} }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
 
-      {/* Top metric cards */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"1rem" }}>
+      {/* Top metric cards — 2-col on mobile, 4-col on desktop */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
+        gap:"0.85rem",
+      }}>
         {[
-          { label:"TAM",  value:`$${tam}B`,      sub: data.tam?.reasoning?.substring(0,60)+"…", color:"#6366f1" },
-          { label:"SAM",  value:`$${sam}B`,      sub: data.sam?.reasoning?.substring(0,60)+"…", color:"#8b5cf6" },
-          { label:"SOM",  value:`$${som}B`,      sub: data.som?.reasoning?.substring(0,60)+"…", color:"#06b6d4" },
+          { label:"TAM",  value:`$${tam}B`,      sub: data.tam?.reasoning?.substring(0,55)+"…", color:"#6366f1" },
+          { label:"SAM",  value:`$${sam}B`,      sub: data.sam?.reasoning?.substring(0,55)+"…", color:"#8b5cf6" },
+          { label:"SOM",  value:`$${som}B`,      sub: data.som?.reasoning?.substring(0,55)+"…", color:"#06b6d4" },
           { label:"CAGR", value:`${data.cagr}%`, sub:"Compound Annual Growth Rate",              color:"#f59e0b" },
         ].map((m,i) => (
           <motion.div key={i}
@@ -66,20 +75,24 @@ export default function MarketSection({ data={} }) {
             style={{
               background:`linear-gradient(135deg, rgba(${hexRgb(m.color)},0.09), rgba(${hexRgb(m.color)},0.03))`,
               border:`1px solid rgba(${hexRgb(m.color)},0.2)`,
-              borderRadius:14, padding:"1.1rem 1.2rem",
+              borderRadius:14, padding: isMobile ? "0.85rem" : "1.1rem 1.2rem",
               cursor:"default", transition:"all 0.3s ease",
             }}
           >
             <div style={{ color:"#475569", fontSize:"0.68rem", fontWeight:700,
               textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.4rem" }}>{m.label}</div>
-            <div style={{ color:m.color, fontWeight:900, fontSize:"1.9rem", lineHeight:1, marginBottom:"0.4rem" }}>{m.value}</div>
+            <div style={{ color:m.color, fontWeight:900, fontSize: isMobile ? "1.5rem" : "1.9rem", lineHeight:1, marginBottom:"0.4rem" }}>{m.value}</div>
             <div style={{ color:"#374151", fontSize:"0.7rem", lineHeight:1.45 }}>{m.sub}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Charts row */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
+      {/* Charts row — stack on mobile */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1.25rem",
+      }}>
         <Card>
           <h3 style={H3}>Market Share Breakdown</h3>
           <ResponsiveContainer width="100%" height={190}>
@@ -116,7 +129,7 @@ export default function MarketSection({ data={} }) {
 
         <Card>
           <h3 style={H3}>Growth Trajectory ($B)</h3>
-          <div style={{ display:"flex", gap:"1rem", marginBottom:"0.75rem" }}>
+          <div style={{ display:"flex", gap:"0.75rem", marginBottom:"0.75rem", flexWrap:"wrap" }}>
             {[
               [data.cagr+"%", "CAGR", "#f59e0b"],
               ["$"+data.five_year_projection+"B", "5-Year", "#10b981"],
@@ -126,6 +139,7 @@ export default function MarketSection({ data={} }) {
                 background:`rgba(${hexRgb(color)},0.07)`,
                 border:`1px solid rgba(${hexRgb(color)},0.15)`,
                 borderRadius:9, padding:"0.5rem 0.85rem", flex:1, textAlign:"center",
+                minWidth:70,
               }}>
                 <div style={{ color, fontWeight:900, fontSize:"1.1rem", lineHeight:1 }}>{val}</div>
                 <div style={{ color:"#374151", fontSize:"0.65rem", marginTop:"0.15rem" }}>{label}</div>
@@ -150,8 +164,12 @@ export default function MarketSection({ data={} }) {
         </Card>
       </div>
 
-      {/* Overview + drivers */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
+      {/* Overview + drivers — stack on mobile */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1.25rem",
+      }}>
         <Card>
           <h3 style={H3}>Market Overview</h3>
           <p style={{ color:"#64748b", lineHeight:1.75, margin:"0 0 1rem", fontSize:"0.88rem" }}>{data.overview}</p>
@@ -190,10 +208,14 @@ export default function MarketSection({ data={} }) {
         </Card>
       </div>
 
-      {/* Customer Segments — fully packed cards */}
+      {/* Customer Segments — responsive grid */}
       <Card>
         <h3 style={H3}>Customer Segments</h3>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"1rem" }}>
+        <div style={{
+          display:"grid",
+          gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3,1fr)",
+          gap:"1rem",
+        }}>
           {(data.segments||[]).map((seg,i) => (
             <motion.div key={i} whileHover={{ y:-3 }}
               style={{
@@ -201,10 +223,8 @@ export default function MarketSection({ data={} }) {
                 border:`1px solid rgba(${hexRgb(COLORS[i%3])},0.2)`,
                 borderRadius:13, padding:"1.1rem",
                 cursor:"default", transition:"all 0.3s ease",
-                display:"flex", flexDirection:"column", gap:"0",
+                display:"flex", flexDirection:"column",
               }}>
-
-              {/* Header */}
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"0.5rem" }}>
                 <div style={{ color:COLORS[i%3], fontWeight:800, fontSize:"0.92rem", lineHeight:1.2 }}>{seg.name}</div>
                 <div style={{
@@ -214,7 +234,6 @@ export default function MarketSection({ data={} }) {
                 }}>#{i+1}</div>
               </div>
 
-              {/* Market size badge */}
               <div style={{
                 display:"inline-flex", alignItems:"center", gap:"0.3rem",
                 background:"rgba(16,185,129,0.08)",
@@ -225,10 +244,8 @@ export default function MarketSection({ data={} }) {
                 <span style={{ color:"#10b981", fontWeight:800, fontSize:"0.82rem" }}>{seg.size}</span>
               </div>
 
-              {/* Divider */}
               <div style={{ height:1, background:`rgba(${hexRgb(COLORS[i%3])},0.12)`, marginBottom:"0.65rem" }} />
 
-              {/* Pain points */}
               <div style={{ color:"#374151", fontSize:"0.62rem", fontWeight:700,
                 textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.4rem" }}>
                 Pain Points
@@ -244,10 +261,8 @@ export default function MarketSection({ data={} }) {
                 ))}
               </div>
 
-              {/* Divider */}
               <div style={{ height:1, background:`rgba(${hexRgb(COLORS[i%3])},0.08)`, marginBottom:"0.65rem" }} />
 
-              {/* Opportunity signal */}
               <div style={{ color:"#374151", fontSize:"0.62rem", fontWeight:700,
                 textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.35rem" }}>
                 Opportunity Signal
@@ -270,7 +285,7 @@ export default function MarketSection({ data={} }) {
         </div>
       </Card>
 
-      {/* Market Risks — full width stacked */}
+      {/* Market Risks */}
       <Card>
         <h3 style={H3}>Market Risks</h3>
         <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
@@ -278,8 +293,10 @@ export default function MarketSection({ data={} }) {
             const color = riskColors[(r.type||"").toLowerCase()] || "#6366f1";
             return (
               <div key={i} style={{
-                display:"grid", gridTemplateColumns:"auto 1fr auto",
-                alignItems:"center", gap:"1rem",
+                display:"flex",
+                flexDirection: isMobile ? "column" : "row",
+                alignItems: isMobile ? "flex-start" : "center",
+                gap: isMobile ? "0.5rem" : "1rem",
                 background:`rgba(${hexRgb(color)},0.04)`,
                 border:`1px solid rgba(${hexRgb(color)},0.12)`,
                 borderLeft:`3px solid rgba(${hexRgb(color)},0.5)`,
@@ -291,13 +308,14 @@ export default function MarketSection({ data={} }) {
                   border:`1px solid rgba(${hexRgb(color)},0.25)`,
                   color, borderRadius:7, padding:"0.18rem 0.65rem",
                   fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase",
-                  whiteSpace:"nowrap",
+                  whiteSpace:"nowrap", alignSelf:"flex-start",
                 }}>{r.type}</span>
-                <span style={{ color:"#6b7280", fontSize:"0.85rem", lineHeight:1.5 }}>{r.risk}</span>
+                <span style={{ color:"#6b7280", fontSize:"0.85rem", lineHeight:1.5, flex:1 }}>{r.risk}</span>
                 <span style={{
                   background:`rgba(${hexRgb(color)},0.08)`,
                   color, fontSize:"0.68rem", fontWeight:700,
                   borderRadius:6, padding:"0.15rem 0.55rem", whiteSpace:"nowrap",
+                  alignSelf: isMobile ? "flex-start" : "center",
                 }}>
                   {i===0 ? "High Impact" : i===1 ? "Med Impact" : "Low Impact"}
                 </span>

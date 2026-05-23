@@ -1,10 +1,15 @@
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import Card from "./Card";
+import { useWindowWidth } from "../../useWindowWidth";
 
 const PHASE_COLORS = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b"];
 
 export default function GtmSection({ data={} }) {
+  const width    = useWindowWidth();
+  const isMobile = width < 640;
+  const isTablet = width < 1024;
+
   if (!data || !Object.keys(data).length) return <Empty />;
 
   const kpis    = data.kpis    || {};
@@ -27,7 +32,8 @@ export default function GtmSection({ data={} }) {
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
         style={{
           background:"linear-gradient(135deg, rgba(99,102,241,0.09), rgba(139,92,246,0.05))",
-          border:"1px solid rgba(99,102,241,0.22)", borderRadius:16, padding:"1.4rem 1.75rem",
+          border:"1px solid rgba(99,102,241,0.22)", borderRadius:16,
+          padding: isMobile ? "1.1rem 1.25rem" : "1.4rem 1.75rem",
           position:"relative", overflow:"hidden",
         }}>
         <div style={{
@@ -37,20 +43,22 @@ export default function GtmSection({ data={} }) {
         }} />
         <div style={{ color:"#374151", fontSize:"0.68rem", textTransform:"uppercase",
           letterSpacing:"0.1em", marginBottom:"0.5rem" }}>Value Proposition</div>
-        <p style={{ color:"#c7d2fe", fontSize:"1.08rem", fontStyle:"italic",
+        <p style={{ color:"#c7d2fe", fontSize: isMobile ? "0.95rem" : "1.08rem", fontStyle:"italic",
           margin:0, lineHeight:1.7, fontWeight:500 }}>
           "{data.value_proposition}"
         </p>
       </motion.div>
 
-      {/* ICP + Pricing side by side — fully packed */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
-
-        {/* ICP — full height, no gaps */}
+      {/* ICP + Pricing — stack on mobile */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1.25rem",
+      }}>
+        {/* ICP */}
         <Card style={{ display:"flex", flexDirection:"column" }}>
           <h3 style={H3}>Ideal Customer Profile</h3>
 
-          {/* 4 attribute tiles */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.6rem", marginBottom:"0.75rem" }}>
             {[
               ["Company Size", icp.company_size, "#6366f1"],
@@ -65,15 +73,13 @@ export default function GtmSection({ data={} }) {
               }}>
                 <div style={{ color:"#374151", fontSize:"0.62rem", marginBottom:"0.25rem",
                   textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</div>
-                <div style={{ color, fontWeight:700, fontSize:"0.85rem", lineHeight:1.3 }}>{value}</div>
+                <div style={{ color, fontWeight:700, fontSize:"0.82rem", lineHeight:1.3 }}>{value}</div>
               </div>
             ))}
           </div>
 
-          {/* Divider */}
           <div style={{ height:1, background:"rgba(255,255,255,0.05)", marginBottom:"0.75rem" }} />
 
-          {/* Pain points — full width tags */}
           <div style={{ marginBottom:"0.75rem" }}>
             <div style={{ color:"#374151", fontSize:"0.62rem", textTransform:"uppercase",
               letterSpacing:"0.08em", marginBottom:"0.45rem" }}>Pain Points</div>
@@ -95,11 +101,9 @@ export default function GtmSection({ data={} }) {
             </div>
           </div>
 
-          {/* Divider */}
           <div style={{ height:1, background:"rgba(255,255,255,0.05)", marginBottom:"0.75rem" }} />
 
-          {/* Buying signals */}
-          <div style={{ flex:1 }}>
+          <div>
             <div style={{ color:"#374151", fontSize:"0.62rem", textTransform:"uppercase",
               letterSpacing:"0.08em", marginBottom:"0.45rem" }}>Buying Signals</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0.4rem" }}>
@@ -116,7 +120,7 @@ export default function GtmSection({ data={} }) {
           </div>
         </Card>
 
-        {/* Pricing — full height */}
+        {/* Pricing */}
         <Card style={{ display:"flex", flexDirection:"column" }}>
           <h3 style={H3}>Pricing Tiers</h3>
           <div style={{ display:"flex", flexDirection:"column", gap:"0.65rem", flex:1 }}>
@@ -129,7 +133,7 @@ export default function GtmSection({ data={} }) {
                   border:`1px solid ${i===1 ? "rgba(99,102,241,0.35)" : "rgba(255,255,255,0.06)"}`,
                   borderRadius:12, padding:"0.9rem 1rem",
                   cursor:"default", transition:"all 0.2s",
-                  position:"relative", flex:1,
+                  position:"relative",
                 }}>
                 {i===1 && (
                   <div style={{
@@ -170,11 +174,15 @@ export default function GtmSection({ data={} }) {
         </Card>
       </div>
 
-      {/* Channels — fully packed, no empty space */}
+      {/* GTM Channels — responsive */}
       {(data.channels||[]).length > 0 && (
         <Card>
           <h3 style={H3}>GTM Channels</h3>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"0.85rem" }}>
+          <div style={{
+            display:"grid",
+            gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3,1fr)",
+            gap:"0.85rem",
+          }}>
             {(data.channels||[]).sort((a,b)=>a.priority-b.priority).map((ch,i) => (
               <div key={i} style={{
                 background: i===0 ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.02)",
@@ -182,7 +190,6 @@ export default function GtmSection({ data={} }) {
                 borderRadius:12, padding:"1rem",
                 display:"flex", flexDirection:"column", gap:"0.6rem",
               }}>
-                {/* Header */}
                 <div style={{ display:"flex", alignItems:"center", gap:"0.65rem" }}>
                   <span style={{
                     background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
@@ -203,10 +210,8 @@ export default function GtmSection({ data={} }) {
                   </div>
                 </div>
 
-                {/* Divider */}
                 <div style={{ height:1, background:"rgba(255,255,255,0.05)" }} />
 
-                {/* CAC + details */}
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.5rem" }}>
                   <div style={{
                     background:"rgba(16,185,129,0.07)",
@@ -230,7 +235,6 @@ export default function GtmSection({ data={} }) {
                   </div>
                 </div>
 
-                {/* Strategy hint */}
                 <div style={{ color:"#374151", fontSize:"0.72rem", lineHeight:1.5 }}>
                   {ch.priority===1
                     ? "Focus 60% of marketing budget here for maximum early traction."
@@ -244,10 +248,14 @@ export default function GtmSection({ data={} }) {
         </Card>
       )}
 
-      {/* 5-Phase roadmap */}
+      {/* 5-Phase roadmap — responsive grid */}
       <Card>
         <h3 style={H3}>5-Phase GTM Roadmap</h3>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"0.65rem" }}>
+        <div style={{
+          display:"grid",
+          gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(5,1fr)",
+          gap:"0.65rem",
+        }}>
           {phases.map((ph,i) => (
             <motion.div key={i}
               initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
@@ -298,11 +306,15 @@ export default function GtmSection({ data={} }) {
         </div>
       </Card>
 
-      {/* KPIs + Budget */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
+      {/* KPIs + Budget — stack on mobile */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1.25rem",
+      }}>
         <Card>
           <h3 style={H3}>MRR Growth Projection</h3>
-          <div style={{ display:"flex", gap:"1rem", marginBottom:"0.75rem", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:"0.75rem", marginBottom:"0.75rem", flexWrap:"wrap" }}>
             {[
               ["12M Revenue", `$${(kpis.revenue_12month||0).toLocaleString()}`, "#f59e0b"],
               ["MRR (12M)",   `$${(kpis.mrr_12month||0).toLocaleString()}`,    "#6366f1"],
@@ -311,7 +323,7 @@ export default function GtmSection({ data={} }) {
               <div key={l} style={{
                 background:`rgba(${hexRgb(c)},0.07)`,
                 border:`1px solid rgba(${hexRgb(c)},0.15)`,
-                borderRadius:9, padding:"0.5rem 0.85rem",
+                borderRadius:9, padding:"0.5rem 0.85rem", flex:1, minWidth:80,
               }}>
                 <div style={{ color:c, fontWeight:900, fontSize:"1rem", lineHeight:1 }}>{v}</div>
                 <div style={{ color:"#374151", fontSize:"0.65rem", marginTop:"0.15rem" }}>{l}</div>
@@ -338,7 +350,12 @@ export default function GtmSection({ data={} }) {
                 fill="url(#mrrGrad)" dot={{ fill:"#6366f1", r:4, strokeWidth:0 }} />
             </AreaChart>
           </ResponsiveContainer>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"0.5rem", marginTop:"0.75rem" }}>
+          {/* KPI micro-cards — 2-col on mobile, 4-col on desktop */}
+          <div style={{
+            display:"grid",
+            gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
+            gap:"0.5rem", marginTop:"0.75rem",
+          }}>
             {[
               ["CAC",    `$${(kpis.cac||0).toLocaleString()}`,  "#ef4444"],
               ["LTV",    `$${(kpis.ltv||0).toLocaleString()}`,  "#10b981"],

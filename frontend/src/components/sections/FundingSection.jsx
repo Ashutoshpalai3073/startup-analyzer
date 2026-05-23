@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import Card from "./Card";
+import { useWindowWidth } from "../../useWindowWidth";
 
 const STAGE_COLORS = {
   "Seed":"#10b981", "Series A":"#6366f1", "Series B":"#8b5cf6",
@@ -9,6 +10,10 @@ const STAGE_COLORS = {
 };
 
 export default function FundingSection({ data={} }) {
+  const width    = useWindowWidth();
+  const isMobile = width < 640;
+  const isTablet = width < 1024;
+
   if (!data || !Object.keys(data).length) return <Empty />;
 
   const sentiment  = (data.sentiment||"neutral").toLowerCase();
@@ -27,13 +32,16 @@ export default function FundingSection({ data={} }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
 
-      {/* Sentiment hero */}
+      {/* Sentiment hero — stack on mobile */}
       <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
         style={{
           background:`linear-gradient(135deg, rgba(${hexRgb(sentColor)},0.07), rgba(${hexRgb(sentColor)},0.02))`,
           border:`1px solid rgba(${hexRgb(sentColor)},0.18)`,
-          borderRadius:16, padding:"1.4rem 1.75rem",
-          display:"grid", gridTemplateColumns:"auto 1px 1fr auto", gap:"1.5rem", alignItems:"center",
+          borderRadius:16, padding: isMobile ? "1.25rem" : "1.4rem 1.75rem",
+          display:"grid",
+          gridTemplateColumns: isMobile ? "1fr" : "auto 1px 1fr auto",
+          gap: isMobile ? "1rem" : "1.5rem",
+          alignItems:"center",
         }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ color:"#374151", fontSize:"0.68rem", textTransform:"uppercase",
@@ -49,24 +57,31 @@ export default function FundingSection({ data={} }) {
           </div>
           <div style={{ color:sentColor, fontWeight:800, fontSize:"1rem", textTransform:"capitalize" }}>{sentiment}</div>
         </div>
-        <div style={{ width:1, height:70, background:"rgba(255,255,255,0.06)" }} />
+
+        {!isMobile && <div style={{ width:1, height:70, background:"rgba(255,255,255,0.06)" }} />}
+
         <div>
           <div style={{ color:"#f59e0b", fontWeight:900, fontSize:"1.6rem", marginBottom:"0.2rem", lineHeight:1 }}>
             {data.total_investment}
           </div>
           <div style={{ color:"#374151", fontSize:"0.72rem", marginBottom:"0.6rem" }}>Total VC Investment (3 years)</div>
-          <p style={{ color:"#475569", fontSize:"0.85rem", lineHeight:1.65, margin:0, maxWidth:500 }}>{data.overview}</p>
+          <p style={{ color:"#475569", fontSize:"0.85rem", lineHeight:1.65, margin:0 }}>{data.overview}</p>
         </div>
+
         {/* Quick stats */}
-        <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+        <div style={{
+          display:"grid",
+          gridTemplateColumns: isMobile ? "repeat(3,1fr)" : "1fr",
+          gap:"0.5rem",
+        }}>
           {[
-            ["Rounds Tracked", rounds.length],
-            ["Active VCs",     vcs.length],
-            ["Ideal Stage",    rec.ideal_stage||"—"],
+            ["Rounds", rounds.length],
+            ["VCs",     vcs.length],
+            ["Stage",   rec.ideal_stage||"—"],
           ].map(([label,val]) => (
             <div key={label} style={{
               background:"rgba(255,255,255,0.04)", borderRadius:9,
-              padding:"0.45rem 0.85rem", textAlign:"center",
+              padding:"0.45rem 0.65rem", textAlign:"center",
             }}>
               <div style={{ color:"#f1f5f9", fontWeight:700, fontSize:"0.95rem" }}>{val}</div>
               <div style={{ color:"#374151", fontSize:"0.65rem" }}>{label}</div>
@@ -75,20 +90,25 @@ export default function FundingSection({ data={} }) {
         </div>
       </motion.div>
 
-      {/* Rounds table + bar chart */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
+      {/* Rounds table + bar chart — stack on mobile */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1.25rem",
+      }}>
         <Card>
           <h3 style={H3}>Recent Funding Rounds</h3>
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:300 }}>
               <thead>
                 <tr>
                   {["Company","Stage","Amount","Year"].map(h => (
                     <th key={h} style={{
                       color:"#374151", fontWeight:700, fontSize:"0.68rem",
-                      padding:"0.45rem 0.75rem", textAlign:"left",
+                      padding:"0.45rem 0.6rem", textAlign:"left",
                       textTransform:"uppercase", letterSpacing:"0.08em",
                       borderBottom:"1px solid rgba(99,102,241,0.1)",
+                      whiteSpace:"nowrap",
                     }}>{h}</th>
                   ))}
                 </tr>
@@ -107,8 +127,8 @@ export default function FundingSection({ data={} }) {
                       <span style={{
                         background:`rgba(${hexRgb(STAGE_COLORS[r.stage]||"#6366f1")},0.12)`,
                         color: STAGE_COLORS[r.stage]||"#8b5cf6",
-                        borderRadius:6, padding:"0.1rem 0.5rem",
-                        fontSize:"0.72rem", fontWeight:700,
+                        borderRadius:6, padding:"0.1rem 0.45rem",
+                        fontSize:"0.7rem", fontWeight:700, whiteSpace:"nowrap",
                       }}>{r.stage}</span>
                     </td>
                     <td style={TD}><span style={{ color:"#10b981", fontWeight:700 }}>{r.amount}</span></td>
@@ -125,7 +145,7 @@ export default function FundingSection({ data={} }) {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} layout="vertical">
               <XAxis type="number" stroke="#1f2937" tick={{ fill:"#475569", fontSize:10 }} tickFormatter={v=>`$${v}M`} />
-              <YAxis type="category" dataKey="company" stroke="#1f2937" tick={{ fill:"#475569", fontSize:10 }} width={80} />
+              <YAxis type="category" dataKey="company" stroke="#1f2937" tick={{ fill:"#475569", fontSize:10 }} width={isMobile ? 60 : 80} />
               <Tooltip
                 formatter={v=>[`$${v}M`,"Amount"]}
                 contentStyle={{ background:"#1a1a3e", border:"1px solid rgba(99,102,241,0.35)", borderRadius:8 }}
@@ -142,8 +162,12 @@ export default function FundingSection({ data={} }) {
         </Card>
       </div>
 
-      {/* VCs + metrics + recommendation */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"1.25rem" }}>
+      {/* VCs + metrics + recommendation — responsive grid */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "1fr 1fr 1fr",
+        gap:"1.25rem",
+      }}>
         <Card>
           <h3 style={H3}>Active VCs in This Space</h3>
           <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
@@ -151,19 +175,17 @@ export default function FundingSection({ data={} }) {
               <motion.div key={i}
                 initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
                 transition={{ delay:i*0.07 }}
-                whileHover={{ x:3 }}
                 style={{
                   background:"rgba(99,102,241,0.05)",
                   border:"1px solid rgba(99,102,241,0.1)",
                   borderRadius:10, padding:"0.8rem",
-                  cursor:"default", transition:"all 0.2s",
                 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"0.3rem" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"0.3rem", gap:"0.5rem", flexWrap:"wrap" }}>
                   <span style={{ color:"#6366f1", fontWeight:700, fontSize:"0.85rem" }}>{vc.name}</span>
                   <span style={{
                     background:"rgba(16,185,129,0.1)", color:"#10b981",
                     fontSize:"0.68rem", fontWeight:700,
-                    borderRadius:6, padding:"0.1rem 0.45rem",
+                    borderRadius:6, padding:"0.1rem 0.45rem", whiteSpace:"nowrap",
                   }}>{vc.check_size}</span>
                 </div>
                 <div style={{ color:"#475569", fontSize:"0.75rem", lineHeight:1.5 }}>{vc.thesis}</div>
@@ -180,17 +202,17 @@ export default function FundingSection({ data={} }) {
                 display:"flex", justifyContent:"space-between", alignItems:"center",
                 padding:"0.6rem 0",
                 borderBottom:"1px solid rgba(255,255,255,0.04)",
+                gap:"0.5rem",
               }}>
                 <span style={{
                   color:"#374151", fontSize:"0.72rem",
                   textTransform:"uppercase", letterSpacing:"0.07em",
                 }}>{k.replace(/_/g," ")}</span>
-                <span style={{ color:"#c7d2fe", fontSize:"0.82rem", fontWeight:600 }}>{v}</span>
+                <span style={{ color:"#c7d2fe", fontSize:"0.82rem", fontWeight:600, textAlign:"right" }}>{v}</span>
               </div>
             ))}
           </div>
 
-          {/* Lead investor */}
           {rounds[0] && (
             <div style={{
               marginTop:"1rem", padding:"0.75rem",
@@ -236,7 +258,7 @@ export default function FundingSection({ data={} }) {
 }
 
 const H3 = { color:"#e2e8f0", fontWeight:700, fontSize:"0.95rem", marginBottom:"0.75rem", marginTop:0 };
-const TD = { color:"#6b7280", padding:"0.6rem 0.75rem", fontSize:"0.82rem" };
+const TD = { color:"#6b7280", padding:"0.6rem 0.6rem", fontSize:"0.82rem", whiteSpace:"nowrap" };
 
 function hexRgb(hex) {
   return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}`;

@@ -1,8 +1,11 @@
 import { motion } from "framer-motion";
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Card from "./Card";
+import { useWindowWidth } from "../../useWindowWidth";
 
 export default function CompetitorSection({ data={} }) {
+  const width    = useWindowWidth();
+  const isMobile = width < 640;
+
   if (!data || !Object.keys(data).length) return <Empty />;
   const competitors = data.competitors || [];
 
@@ -10,7 +13,11 @@ export default function CompetitorSection({ data={} }) {
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
 
       {/* Overview stats */}
-      <div style={{ display:"flex", gap:"1rem", flexWrap:"wrap" }}>
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
+        gap:"0.85rem",
+      }}>
         {[
           ["Market Type",    data.landscape_type   || "—", "#8b5cf6"],
           ["Competition",    data.competition_level || "—", "#06b6d4"],
@@ -24,11 +31,11 @@ export default function CompetitorSection({ data={} }) {
             style={{
               background:`linear-gradient(135deg, rgba(${hexRgb(color)},0.08), rgba(${hexRgb(color)},0.03))`,
               border:`1px solid rgba(${hexRgb(color)},0.2)`,
-              borderRadius:14, padding:"0.9rem 1.4rem", minWidth:150,
+              borderRadius:14, padding:"0.9rem 1.1rem",
               cursor:"default", transition:"all 0.3s",
             }}>
             <div style={{ color:"#374151", fontSize:"0.7rem", textTransform:"uppercase", letterSpacing:"0.1em" }}>{label}</div>
-            <div style={{ color, fontWeight:800, fontSize:"1.3rem", textTransform:"capitalize", marginTop:"0.2rem" }}>{value}</div>
+            <div style={{ color, fontWeight:800, fontSize:"1.25rem", textTransform:"capitalize", marginTop:"0.2rem" }}>{value}</div>
           </motion.div>
         ))}
       </div>
@@ -38,13 +45,11 @@ export default function CompetitorSection({ data={} }) {
         <motion.div key={i}
           initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
           transition={{ delay:i*0.1 }}
-          whileHover={{ y:-2, boxShadow:"0 20px 50px rgba(0,0,0,0.4)" }}
           style={{
             background:"rgba(10,10,28,0.85)",
             border:"1px solid rgba(255,255,255,0.06)",
             borderLeft:`3px solid ${["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b"][i%5]}`,
             borderRadius:14, padding:"1.25rem",
-            transition:"all 0.3s ease",
           }}
         >
           <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:"0.75rem", marginBottom:"0.85rem" }}>
@@ -58,7 +63,11 @@ export default function CompetitorSection({ data={} }) {
             </div>
           </div>
           <p style={{ color:"#475569", fontSize:"0.85rem", marginBottom:"1rem", lineHeight:1.6 }}>{c.product}</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem" }}>
+          <div style={{
+            display:"grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap:"0.75rem",
+          }}>
             <div style={{ background:"rgba(16,185,129,0.05)", border:"1px solid rgba(16,185,129,0.12)", borderRadius:10, padding:"0.85rem" }}>
               <div style={{ color:"#10b981", fontWeight:700, fontSize:"0.75rem", marginBottom:"0.5rem", textTransform:"uppercase" }}>✓ USPs</div>
               {(c.usps||[]).map((u,j) => (

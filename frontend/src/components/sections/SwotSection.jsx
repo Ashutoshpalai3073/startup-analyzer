@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import Card from "./Card";
+import { useWindowWidth } from "../../useWindowWidth";
 
 const Q = [
   { key:"strengths",     label:"Strengths",     icon:"S", color:"#10b981", bg:"rgba(16,185,129,0.05)",  border:"rgba(16,185,129,0.15)"  },
@@ -9,23 +10,26 @@ const Q = [
 ];
 
 export default function SwotSection({ data={} }) {
-  if (!data || !Object.keys(data).length) return <Empty />;
+  const width    = useWindowWidth();
+  const isMobile = width < 640;
 
-  const allItems = Q.reduce((acc, q) => acc + (data[q.key]||[]).length, 0);
+  if (!data || !Object.keys(data).length) return <Empty />;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
 
-      {/* Summary bar */}
+      {/* Summary bar — 2-col on mobile, 4-col on desktop */}
       <div style={{
-        display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"0.75rem",
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
+        gap:"0.75rem",
       }}>
         {Q.map((q) => (
           <div key={q.key} style={{
             background: q.bg,
             border: `1px solid ${q.border}`,
             borderRadius:12, padding:"0.85rem 1rem",
-            display:"flex", alignItems:"center", gap:"0.75rem",
+            display:"flex", alignItems:"center", gap:"0.65rem",
           }}>
             <div style={{
               width:32, height:32, borderRadius:8, flexShrink:0,
@@ -42,8 +46,12 @@ export default function SwotSection({ data={} }) {
         ))}
       </div>
 
-      {/* SWOT matrix */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem" }}>
+      {/* SWOT matrix — 1-col on mobile, 2-col on desktop */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1rem",
+      }}>
         {Q.map((q, qi) => (
           <motion.div key={q.key}
             initial={{ opacity:0, scale:0.97 }}
@@ -56,7 +64,6 @@ export default function SwotSection({ data={} }) {
               overflow:"hidden", position:"relative",
             }}
           >
-            {/* Corner watermark */}
             <div style={{
               position:"absolute", top:-12, right:-12,
               width:60, height:60, borderRadius:"50%",
@@ -64,7 +71,6 @@ export default function SwotSection({ data={} }) {
               pointerEvents:"none",
             }} />
 
-            {/* Header */}
             <div style={{
               display:"flex", alignItems:"center",
               justifyContent:"space-between", marginBottom:"1rem",
@@ -77,7 +83,7 @@ export default function SwotSection({ data={} }) {
                   display:"flex", alignItems:"center", justifyContent:"center",
                   color:q.color, fontWeight:900, fontSize:"0.78rem",
                 }}>{q.icon}</div>
-                <span style={{ color:q.color, fontWeight:800, fontSize:"0.95rem", letterSpacing:"-0.01em" }}>
+                <span style={{ color:q.color, fontWeight:800, fontSize:"0.95rem" }}>
                   {q.label}
                 </span>
               </div>
@@ -90,10 +96,8 @@ export default function SwotSection({ data={} }) {
               </span>
             </div>
 
-            {/* Divider */}
             <div style={{ height:1, background:`rgba(${hexRgb(q.color)},0.12)`, marginBottom:"0.85rem" }} />
 
-            {/* Items */}
             <div style={{ display:"flex", flexDirection:"column", gap:"0.45rem" }}>
               {(data[q.key]||[]).map((item, i) => (
                 <motion.div key={i}
@@ -124,10 +128,12 @@ export default function SwotSection({ data={} }) {
         ))}
       </div>
 
-      {/* Strategic priorities + risk side by side */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
-
-        {/* Strategic priorities */}
+      {/* Strategic priorities + risk — stack on mobile */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap:"1.25rem",
+      }}>
         {(data.priorities||[]).length > 0 && (
           <Card glow color="#6366f1">
             <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"1rem" }}>
@@ -169,7 +175,6 @@ export default function SwotSection({ data={} }) {
           </Card>
         )}
 
-        {/* Risk register */}
         {(data.risks||[]).length > 0 && (
           <Card>
             <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"1rem" }}>
@@ -185,10 +190,9 @@ export default function SwotSection({ data={} }) {
               </h3>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:"0.5rem" }}>
-              {/* Table header */}
               <div style={{
                 display:"grid", gridTemplateColumns:"1fr auto auto",
-                gap:"0.75rem", padding:"0 0.5rem 0.4rem",
+                gap:"0.5rem", padding:"0 0.5rem 0.4rem",
                 borderBottom:"1px solid rgba(255,255,255,0.05)",
               }}>
                 {["Risk","Likelihood","Impact"].map(h => (
@@ -201,12 +205,12 @@ export default function SwotSection({ data={} }) {
               {(data.risks||[]).map((r, i) => (
                 <div key={i} style={{
                   display:"grid", gridTemplateColumns:"1fr auto auto",
-                  gap:"0.75rem", alignItems:"center",
+                  gap:"0.5rem", alignItems:"center",
                   padding:"0.5rem 0.5rem",
                   background: i%2===0 ? "rgba(255,255,255,0.02)" : "transparent",
                   borderRadius:7,
                 }}>
-                  <span style={{ color:"#6b7280", fontSize:"0.8rem", lineHeight:1.4 }}>{r.risk}</span>
+                  <span style={{ color:"#6b7280", fontSize:"0.78rem", lineHeight:1.4 }}>{r.risk}</span>
                   <RatingPill v={r.likelihood} />
                   <RatingPill v={r.impact} />
                 </div>
@@ -216,12 +220,13 @@ export default function SwotSection({ data={} }) {
         )}
       </div>
 
-      {/* SWOT insight summary */}
+      {/* SWOT insight summary — 2-col on mobile, 4-col on desktop */}
       <div style={{
         background:"rgba(10,10,28,0.6)",
         border:"1px solid rgba(255,255,255,0.05)",
         borderRadius:14, padding:"1.25rem 1.5rem",
-        display:"grid", gridTemplateColumns:"repeat(4,1fr)",
+        display:"grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
         gap:"1rem", textAlign:"center",
       }}>
         {Q.map(q => (
@@ -245,7 +250,7 @@ function RatingPill({ v="" }) {
     <span style={{
       background:`rgba(${hexRgb(color)},0.1)`,
       border:`1px solid rgba(${hexRgb(color)},0.25)`,
-      color, borderRadius:100, padding:"0.15rem 0.6rem",
+      color, borderRadius:100, padding:"0.15rem 0.5rem",
       fontSize:"0.68rem", fontWeight:700, whiteSpace:"nowrap",
     }}>{v}</span>
   );

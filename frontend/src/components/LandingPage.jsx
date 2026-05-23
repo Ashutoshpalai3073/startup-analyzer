@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useWindowWidth } from "../useWindowWidth";
 
 const EXAMPLES = [
   "SaaS tool for remote team productivity using sentiment analysis",
@@ -16,7 +17,7 @@ function ParticleCanvas() {
     const ctx    = canvas.getContext("2d");
     let w = canvas.width  = window.innerWidth;
     let h = canvas.height = window.innerHeight;
-    const particles = Array.from({ length: 120 }, () => ({
+    const particles = Array.from({ length: 80 }, () => ({
       x: Math.random() * w, y: Math.random() * h,
       r: Math.random() * 1.5 + 0.3,
       dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4,
@@ -34,7 +35,6 @@ function ParticleCanvas() {
         if (p.x < 0 || p.x > w) p.dx *= -1;
         if (p.y < 0 || p.y > h) p.dy *= -1;
       });
-      // connect nearby particles
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -92,43 +92,18 @@ function Cube3D({ size=60, color="#6366f1", delay=0 }) {
   );
 }
 
-/* ── Floating Card Preview ──────────────────────────────────────────── */
-function FloatingCard({ children, delay=0, x=0, rotate=0 }) {
-  return (
-    <motion.div
-      initial={{ opacity:0, y:40 }}
-      animate={{ opacity:1, y:0, rotate }}
-      transition={{ delay, duration:0.8, ease:"easeOut" }}
-      style={{
-        background: "rgba(26,26,60,0.6)",
-        border: "1px solid rgba(99,102,241,0.25)",
-        borderRadius: 16, padding: "1rem 1.25rem",
-        backdropFilter: "blur(16px)",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.08)",
-        transform: `perspective(800px) rotateY(${x}deg)`,
-        position: "absolute",
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 export default function LandingPage({ onAnalyze, error }) {
+  const width       = useWindowWidth();
+  const isMobile    = width < 640;
+  const isTablet    = width < 1024;
+
   const [idea, setIdea]       = useState("");
   const [focused, setFocused] = useState(false);
   const [exIdx, setExIdx]     = useState(0);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const t = setInterval(() => setExIdx(i => (i+1) % EXAMPLES.length), 3500);
     return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => setMousePos({ x: e.clientX / window.innerWidth - 0.5, y: e.clientY / window.innerHeight - 0.5 });
-    window.addEventListener("mousemove", handler);
-    return () => window.removeEventListener("mousemove", handler);
   }, []);
 
   return (
@@ -139,19 +114,19 @@ export default function LandingPage({ onAnalyze, error }) {
         @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
         @keyframes glow { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
         @keyframes gradShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .hover-card:hover { transform: perspective(800px) rotateY(5deg) translateY(-4px) scale(1.02) !important; transition: all 0.3s ease !important; }
         .cta-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 20px 60px rgba(99,102,241,0.5) !important; }
         .example-chip:hover { background: rgba(99,102,241,0.2) !important; border-color: rgba(99,102,241,0.5) !important; }
+        .hover-card:hover { transform: translateY(-4px) !important; transition: all 0.3s ease !important; }
       `}</style>
 
       <ParticleCanvas />
 
       {/* Ambient glows */}
-      <div style={{ position:"fixed", top:"-20%", left:"-10%", width:700, height:700,
+      <div style={{ position:"fixed", top:"-20%", left:"-10%", width:isMobile?400:700, height:isMobile?400:700,
         background:"radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
         borderRadius:"50%", pointerEvents:"none", zIndex:1,
         animation:"glow 4s ease-in-out infinite" }} />
-      <div style={{ position:"fixed", bottom:"-20%", right:"-10%", width:600, height:600,
+      <div style={{ position:"fixed", bottom:"-20%", right:"-10%", width:isMobile?300:600, height:isMobile?300:600,
         background:"radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)",
         borderRadius:"50%", pointerEvents:"none", zIndex:1 }} />
 
@@ -162,7 +137,7 @@ export default function LandingPage({ onAnalyze, error }) {
         style={{
           position:"relative", zIndex:10,
           display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"1.25rem 3rem",
+          padding: isMobile ? "1rem 1.25rem" : "1.25rem 3rem",
           borderBottom:"1px solid rgba(99,102,241,0.1)",
           background:"rgba(5,5,16,0.8)", backdropFilter:"blur(20px)",
         }}
@@ -174,47 +149,55 @@ export default function LandingPage({ onAnalyze, error }) {
             display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:"1rem", fontWeight:800, color:"#fff",
             boxShadow:"0 4px 15px rgba(99,102,241,0.4)",
+            flexShrink:0,
           }}>✦</div>
-          <span style={{ color:"#fff", fontWeight:800, fontSize:"1.1rem", letterSpacing:"-0.02em" }}>
-            StartupAnalyzer
+          <span style={{ color:"#fff", fontWeight:800, fontSize: isMobile ? "0.95rem" : "1.1rem", letterSpacing:"-0.02em" }}>
+            {isMobile ? "Drusti" : "StartupAnalyzer"}
           </span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
-  <div style={{
-    background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)",
-    borderRadius:100, padding:"0.3rem 0.9rem",
-    display:"flex", alignItems:"center", gap:"0.5rem",
-  }}>
-    <div style={{
-      width:7, height:7, borderRadius:"50%",
-      background:"#10b981",
-      boxShadow:"0 0 8px #10b981",
-      animation:"glow 2s ease-in-out infinite",
-    }}/>
-    <span style={{ color:"#10b981", fontSize:"0.75rem", fontWeight:600 }}>
-      AI Agents Online
-    </span>
-  </div>
-</div>
+          <div style={{
+            background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)",
+            borderRadius:100, padding: isMobile ? "0.3rem 0.6rem" : "0.3rem 0.9rem",
+            display:"flex", alignItems:"center", gap:"0.5rem",
+          }}>
+            <div style={{
+              width:7, height:7, borderRadius:"50%",
+              background:"#10b981",
+              boxShadow:"0 0 8px #10b981",
+              animation:"glow 2s ease-in-out infinite",
+              flexShrink:0,
+            }}/>
+            <span style={{ color:"#10b981", fontSize:"0.75rem", fontWeight:600, whiteSpace:"nowrap" }}>
+              {isMobile ? "Online" : "AI Agents Online"}
+            </span>
+          </div>
+        </div>
       </motion.nav>
 
       {/* Hero */}
       <div style={{
         position:"relative", zIndex:5,
         display:"flex", flexDirection:"column", alignItems:"center",
-        padding:"5rem 2rem 3rem",
+        padding: isMobile ? "2.5rem 1rem 2rem" : isTablet ? "3.5rem 1.5rem 2.5rem" : "5rem 2rem 3rem",
         perspective:"1200px",
       }}>
-        {/* Floating 3D cubes */}
-        <div style={{ position:"absolute", top:60, left:"8%", animation:"float 6s ease-in-out infinite", zIndex:2 }}>
-          <Cube3D size={50} color="#6366f1" delay={0} />
-        </div>
-        <div style={{ position:"absolute", top:120, right:"10%", animation:"float 8s ease-in-out infinite 1s", zIndex:2 }}>
-          <Cube3D size={35} color="#8b5cf6" delay={2} />
-        </div>
-        <div style={{ position:"absolute", bottom:100, left:"15%", animation:"float 7s ease-in-out infinite 0.5s", zIndex:2 }}>
-          <Cube3D size={25} color="#06b6d4" delay={1} />
-        </div>
+        {/* Floating 3D cubes — hidden on mobile to avoid overlap */}
+        {!isMobile && (
+          <>
+            <div style={{ position:"absolute", top:60, left:"8%", animation:"float 6s ease-in-out infinite", zIndex:2 }}>
+              <Cube3D size={isTablet ? 35 : 50} color="#6366f1" delay={0} />
+            </div>
+            <div style={{ position:"absolute", top:120, right:"10%", animation:"float 8s ease-in-out infinite 1s", zIndex:2 }}>
+              <Cube3D size={isTablet ? 25 : 35} color="#8b5cf6" delay={2} />
+            </div>
+            {!isTablet && (
+              <div style={{ position:"absolute", bottom:100, left:"15%", animation:"float 7s ease-in-out infinite 0.5s", zIndex:2 }}>
+                <Cube3D size={25} color="#06b6d4" delay={1} />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Badge */}
         <motion.div
@@ -224,15 +207,16 @@ export default function LandingPage({ onAnalyze, error }) {
           style={{
             background:"linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))",
             border:"1px solid rgba(99,102,241,0.35)",
-            borderRadius:100, padding:"0.4rem 1.2rem",
-            fontSize:"0.78rem", fontWeight:700,
-            color:"#a5b4fc", letterSpacing:"0.08em",
-            textTransform:"uppercase", marginBottom:"2rem",
+            borderRadius:100, padding: isMobile ? "0.35rem 0.9rem" : "0.4rem 1.2rem",
+            fontSize: isMobile ? "0.7rem" : "0.78rem", fontWeight:700,
+            color:"#a5b4fc", letterSpacing:"0.06em",
+            textTransform:"uppercase", marginBottom: isMobile ? "1.25rem" : "2rem",
             backdropFilter:"blur(10px)",
             boxShadow:"0 0 30px rgba(99,102,241,0.15)",
+            textAlign:"center",
           }}
         >
-          🚀 AI-Powered Startup Intelligence Platform
+          🚀 {isMobile ? "AI Startup Intelligence" : "AI-Powered Startup Intelligence Platform"}
         </motion.div>
 
         {/* Main heading */}
@@ -241,10 +225,12 @@ export default function LandingPage({ onAnalyze, error }) {
           animate={{ opacity:1, y:0 }}
           transition={{ delay:0.2 }}
           style={{
-            fontSize:"clamp(2.8rem,6vw,5rem)", fontWeight:900,
-            textAlign:"center", lineHeight:1.08,
-            letterSpacing:"-0.03em", marginBottom:"1.5rem",
-            maxWidth:900,
+            fontSize: isMobile ? "2rem" : isTablet ? "2.8rem" : "clamp(2.8rem,6vw,5rem)",
+            fontWeight:900,
+            textAlign:"center", lineHeight:1.1,
+            letterSpacing:"-0.03em",
+            marginBottom: isMobile ? "1rem" : "1.5rem",
+            maxWidth:900, padding:"0 0.5rem",
           }}
         >
           <span style={{ color:"#f1f5f9" }}>Transform Your Idea Into</span>
@@ -255,7 +241,7 @@ export default function LandingPage({ onAnalyze, error }) {
             WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
             animation:"gradShift 4s ease infinite",
           }}>
-            an Investor-Ready Report
+            {isMobile ? "an Investor Report" : "an Investor-Ready Report"}
           </span>
         </motion.h1>
 
@@ -265,13 +251,14 @@ export default function LandingPage({ onAnalyze, error }) {
           transition={{ delay:0.3 }}
           style={{
             color:"#64748b", textAlign:"center",
-            fontSize:"1.15rem", maxWidth:580, lineHeight:1.75,
-            marginBottom:"3rem",
+            fontSize: isMobile ? "0.9rem" : "1.15rem",
+            maxWidth:580, lineHeight:1.75,
+            marginBottom: isMobile ? "1.75rem" : "3rem",
+            padding:"0 0.5rem",
           }}
         >
           Five AI analysts work in parallel — market sizing, competitor intel,
-          funding landscape, SWOT matrix, and full GTM strategy. Ready to impress
-          any investor in minutes.
+          funding landscape, SWOT matrix, and full GTM strategy.{!isMobile && " Ready to impress any investor in minutes."}
         </motion.p>
 
         {/* Input card */}
@@ -283,12 +270,13 @@ export default function LandingPage({ onAnalyze, error }) {
             width:"100%", maxWidth:680,
             background:"rgba(15,15,35,0.85)",
             border:`1px solid ${focused ? "rgba(99,102,241,0.6)" : "rgba(99,102,241,0.2)"}`,
-            borderRadius:20, padding:"1.75rem",
+            borderRadius:20, padding: isMobile ? "1.25rem" : "1.75rem",
             backdropFilter:"blur(20px)",
             boxShadow: focused
               ? "0 0 0 4px rgba(99,102,241,0.1), 0 30px 80px rgba(0,0,0,0.5)"
               : "0 30px 80px rgba(0,0,0,0.4)",
             transition:"all 0.3s ease",
+            boxSizing:"border-box",
           }}
         >
           <label style={{ color:"#94a3b8", fontSize:"0.78rem", fontWeight:700,
@@ -302,7 +290,7 @@ export default function LandingPage({ onAnalyze, error }) {
             onBlur={() => setFocused(false)}
             placeholder="e.g. AI-powered SaaS tool for remote team productivity..."
             style={{
-              width:"100%", minHeight:90, background:"transparent",
+              width:"100%", minHeight:isMobile ? 70 : 90, background:"transparent",
               border:"none", outline:"none", color:"#f1f5f9",
               fontSize:"1rem", lineHeight:1.7, resize:"none",
               boxSizing:"border-box",
@@ -319,7 +307,7 @@ export default function LandingPage({ onAnalyze, error }) {
                   color:"#7c86e8", borderRadius:8, padding:"0.25rem 0.65rem",
                   fontSize:"0.72rem", cursor:"pointer", transition:"all 0.2s",
                 }}>
-                {ex.substring(0, 28)}…
+                {ex.substring(0, isMobile ? 22 : 28)}…
               </button>
             ))}
           </div>
@@ -360,35 +348,40 @@ export default function LandingPage({ onAnalyze, error }) {
           initial={{ opacity:0 }}
           animate={{ opacity:1 }}
           transition={{ delay:0.6 }}
-          style={{ display:"flex", flexWrap:"wrap", gap:"0.75rem", marginTop:"2.5rem", justifyContent:"center" }}
+          style={{
+            display:"grid",
+            gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(6,1fr)",
+            gap: isMobile ? "0.5rem" : "0.75rem",
+            marginTop: isMobile ? "1.5rem" : "2.5rem",
+            width:"100%", maxWidth:900,
+            padding:"0 0.5rem",
+          }}
         >
           {[
-  ["▲","Market Sizing","TAM · SAM · SOM · CAGR"],
-  ["◈","Competitor Intel","Top 5 rivals analyzed"],
-  ["◎","Funding Map","VC activity & rounds"],
-  ["⬡","SWOT Matrix","Full strategic analysis"],
-  ["→","GTM Strategy","5-phase roadmap"],
-  ["↓","Pitch Deck","Download PPTX instantly"],
-].map(([icon, title, sub]) => (
+            ["▲","Market","TAM · SAM · SOM"],
+            ["◈","Competitors","Top 5 rivals"],
+            ["◎","Funding","VC landscape"],
+            ["⬡","SWOT","Strategy matrix"],
+            ["→","GTM","5-phase roadmap"],
+            ["↓","Pitch Deck","Download PPTX"],
+          ].map(([icon, title, sub]) => (
             <motion.div key={title} className="hover-card"
-              whileHover={{ y:-4 }}
               style={{
                 background:"rgba(15,15,35,0.7)",
                 border:"1px solid rgba(99,102,241,0.14)",
-                borderRadius:14, padding:"0.8rem 1.1rem",
-                textAlign:"center", minWidth:130,
+                borderRadius:14, padding: isMobile ? "0.65rem 0.5rem" : "0.8rem 1.1rem",
+                textAlign:"center",
                 backdropFilter:"blur(10px)",
                 cursor:"default",
                 transition:"all 0.3s ease",
               }}>
               <div style={{
-  fontSize:"1rem", fontWeight:900, marginBottom:"0.4rem",
-  color:"#6366f1", letterSpacing:"-0.02em",
-  background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
-  WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-}}>{icon}</div>
-              <div style={{ color:"#e2e8f0", fontWeight:700, fontSize:"0.82rem" }}>{title}</div>
-              <div style={{ color:"#475569", fontSize:"0.7rem", marginTop:"0.15rem" }}>{sub}</div>
+                fontSize:"1rem", fontWeight:900, marginBottom:"0.3rem",
+                background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
+                WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+              }}>{icon}</div>
+              <div style={{ color:"#e2e8f0", fontWeight:700, fontSize: isMobile ? "0.72rem" : "0.82rem" }}>{title}</div>
+              {!isMobile && <div style={{ color:"#475569", fontSize:"0.7rem", marginTop:"0.15rem" }}>{sub}</div>}
             </motion.div>
           ))}
         </motion.div>
@@ -404,8 +397,10 @@ export default function LandingPage({ onAnalyze, error }) {
           borderTop:"1px solid rgba(99,102,241,0.08)",
           borderBottom:"1px solid rgba(99,102,241,0.08)",
           background:"rgba(10,10,25,0.6)", backdropFilter:"blur(10px)",
-          display:"flex", justifyContent:"center", flexWrap:"wrap",
-          gap:"0", padding:"1.5rem 2rem",
+          display:"grid",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
+          gap: isMobile ? "0" : "0",
+          padding: isMobile ? "1rem" : "1.5rem 2rem",
         }}
       >
         {[
@@ -415,13 +410,17 @@ export default function LandingPage({ onAnalyze, error }) {
           ["Free","To Get Started"],
         ].map(([num, label], i) => (
           <div key={i} style={{
-            textAlign:"center", padding:"0 3rem",
-            borderRight: i < 3 ? "1px solid rgba(99,102,241,0.1)" : "none",
+            textAlign:"center",
+            padding: isMobile ? "0.75rem 0.5rem" : "0 3rem",
+            borderRight: isMobile
+              ? (i % 2 === 0 ? "1px solid rgba(99,102,241,0.1)" : "none")
+              : (i < 3 ? "1px solid rgba(99,102,241,0.1)" : "none"),
+            borderBottom: isMobile && i < 2 ? "1px solid rgba(99,102,241,0.08)" : "none",
           }}>
             <div style={{
               background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
               WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-              fontWeight:900, fontSize:"1.8rem", letterSpacing:"-0.02em",
+              fontWeight:900, fontSize: isMobile ? "1.4rem" : "1.8rem", letterSpacing:"-0.02em",
             }}>{num}</div>
             <div style={{ color:"#475569", fontSize:"0.78rem", marginTop:"0.1rem" }}>{label}</div>
           </div>
