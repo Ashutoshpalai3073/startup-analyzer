@@ -141,7 +141,7 @@ export default function FundingSection({ data={} }) {
         </Card>
 
         <Card>
-          <h3 style={H3}>Funding by Company ($M)</h3>
+          <h3 style={H3}>Funding Raised by Competitors ($M)</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} layout="vertical">
               <XAxis type="number" stroke="#1f2937" tick={{ fill:"#475569", fontSize:10 }} tickFormatter={v=>`$${v}M`} />

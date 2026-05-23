@@ -205,7 +205,6 @@ def _run_funding(idea, llm):
     )
 
 def _run_swot(idea, llm, market_raw, comp_raw):
-    # Trim context to reduce token usage
     ctx = f"Market: {market_raw[:600]}\nCompetitors: {comp_raw[:600]}"
     return _run_single(
         role      = "Strategic SWOT Analyst",
@@ -216,7 +215,6 @@ def _run_swot(idea, llm, market_raw, comp_raw):
     )
 
 def _run_gtm(idea, llm, swot_raw, fund_raw):
-    # Minimal context — just key signals, not full outputs
     ctx = f"SWOT priorities: {swot_raw[:400]}\nFunding: {fund_raw[:300]}"
     return _run_single(
         role      = "GTM Strategist",
@@ -231,6 +229,10 @@ def _run_gtm(idea, llm, swot_raw, fund_raw):
 # MAIN RUNNER
 # ══════════════════════════════════════════════════════════════════════════════
 def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
+    # ── FIX 1: Suppress CrewAI Fernet key error ──────────────────────────────
+    os.environ["CREWAI_STORAGE_DIR"]        = "/tmp"
+    os.environ.setdefault("CREWAI_TELEMETRY_OPT_OUT", "true")
+
     os.environ["OPENAI_API_KEY"] = "sk-dummy"
     os.environ["GROQ_API_KEY"]   = groq_api_key
 
@@ -238,7 +240,6 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
     llm_fast = LLM(model="groq/llama-3.1-8b-instant")
 
     # ── ROUND 1: Market + Competitor + Funding run in PARALLEL ───────────────
-    # These 3 have zero dependencies on each other — pure parallel execution
     print("\n🚀 Round 1: Parallel execution — market, competitor, funding...")
     results = {}
 
@@ -262,12 +263,10 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
     fund_raw   = results.get("funding",     "")
 
     # ── MANDATORY COOLDOWN before SWOT + GTM ─────────────────────────────────
-    # Round 1 used ~3 agents worth of tokens. Wait for TPM window to partially
-    # reset before hitting 2 more heavy tasks back to back.
     print("\n⏸️  Cooldown: waiting 30s for token window to reset...")
     time.sleep(30)
 
-    # ── ROUND 2: SWOT (depends on market + competitor) ────────────────────────
+    # ── ROUND 2: SWOT ─────────────────────────────────────────────────────────
     print("\n🔍 Round 2: SWOT analysis...")
     swot_raw = ""
     try:
@@ -276,11 +275,11 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
     except Exception as e:
         print(f"  ⚠️  SWOT failed: {e}")
 
-    # ── SHORT PAUSE before GTM ────────────────────────────────────────────────
-    print("\n⏸️  Short pause: waiting 15s before GTM...")
-    time.sleep(15)
+    # ── FIX 2: Increased pause before GTM ────────────────────────────────────
+    print("\n⏸️  Short pause: waiting 25s before GTM...")
+    time.sleep(25)
 
-    # ── ROUND 3: GTM (depends on swot + funding) ──────────────────────────────
+    # ── ROUND 3: GTM ──────────────────────────────────────────────────────────
     print("\n🚀 Round 3: GTM strategy...")
     gtm_raw = ""
     try:
