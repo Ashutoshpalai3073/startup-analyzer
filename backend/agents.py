@@ -264,8 +264,8 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
     # ── MANDATORY COOLDOWN before SWOT + GTM ─────────────────────────────────
     # Round 1 used ~3 agents worth of tokens. Wait for TPM window to partially
     # reset before hitting 2 more heavy tasks back to back.
-    print("\n⏸️  Cooldown: waiting 65s for token window to reset...")
-    time.sleep(65)
+    print("\n⏸️  Cooldown: waiting 30s for token window to reset...")
+    time.sleep(30)
 
     # ── ROUND 2: SWOT (depends on market + competitor) ────────────────────────
     print("\n🔍 Round 2: SWOT analysis...")
@@ -277,8 +277,8 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
         print(f"  ⚠️  SWOT failed: {e}")
 
     # ── SHORT PAUSE before GTM ────────────────────────────────────────────────
-    print("\n⏸️  Short pause: waiting 30s before GTM...")
-    time.sleep(30)
+    print("\n⏸️  Short pause: waiting 15s before GTM...")
+    time.sleep(15)
 
     # ── ROUND 3: GTM (depends on swot + funding) ──────────────────────────────
     print("\n🚀 Round 3: GTM strategy...")
