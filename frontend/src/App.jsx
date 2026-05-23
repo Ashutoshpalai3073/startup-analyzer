@@ -16,11 +16,17 @@ export default function App() {
     setStage("loading");
     setError("");
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 600000);
+
       const res = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startup_idea: startupIdea }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || "Analysis failed");
@@ -29,18 +35,28 @@ export default function App() {
       setAnalysis(data);
       setStage("waiting");
     } catch (e) {
-      setError(e.message);
+      if (e.name === "AbortError") {
+        setError("Analysis timed out. Please try again.");
+      } else {
+        setError("Fetch failed. Check your connection and try again.");
+      }
       setStage("landing");
     }
   };
 
   const handleDownload = async (brandName) => {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+
       const res = await fetch(`${API_URL}/download-pitch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ analysis, brand_name: brandName }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
       const url  = window.URL.createObjectURL(blob);
@@ -50,7 +66,11 @@ export default function App() {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      alert("Download failed: " + e.message);
+      if (e.name === "AbortError") {
+        alert("Download timed out. Please try again.");
+      } else {
+        alert("Download failed: " + e.message);
+      }
     }
   };
 
@@ -58,8 +78,8 @@ export default function App() {
     <div style={{ fontFamily: "'Inter', sans-serif", minHeight: "100vh", background: "#050510" }}>
       {stage === "landing"   && <LandingPage onAnalyze={handleAnalyze} error={error} />}
       {(stage === "loading" || stage === "waiting") && (
-  <LoadingScreen idea={idea} onComplete={() => stage === "waiting" && setStage("dashboard")} />
-)}
+        <LoadingScreen idea={idea} onComplete={() => stage === "waiting" && setStage("dashboard")} />
+      )}
       {stage === "dashboard" && (
         <Dashboard analysis={analysis} onDownload={handleDownload} onReset={() => setStage("landing")} />
       )}
