@@ -152,7 +152,7 @@ export default function LandingPage({ onAnalyze, error }) {
             flexShrink:0,
           }}>✦</div>
           <span style={{ color:"#fff", fontWeight:800, fontSize: isMobile ? "0.95rem" : "1.1rem", letterSpacing:"-0.02em" }}>
-            {isMobile ? "Drusti" : "StartupAnalyzer"}
+            Drusti
           </span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>

@@ -61,7 +61,7 @@ export default function Dashboard({ analysis, onDownload, onReset }) {
               <div style={{
                 color:"#fff", fontWeight:800, fontSize:"0.95rem",
                 letterSpacing:"-0.01em", lineHeight:1.1,
-              }}>StartupAnalyzer</div>
+              }}>Drusti</div>
               <div style={{
                 color:"#374151", fontSize:"0.68rem", marginTop:"0.15rem",
                 maxWidth: isTablet ? 200 : 380, overflow:"hidden",
