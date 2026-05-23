@@ -183,7 +183,7 @@ export default function LandingPage({ onAnalyze, error }) {
         perspective:"1200px",
       }}>
         {/* Floating 3D cubes — hidden on mobile to avoid overlap */}
-        {!isMobile && (
+        {!isMobile && !isTablet && (
           <>
             <div style={{ position:"absolute", top:60, left:"8%", animation:"float 6s ease-in-out infinite", zIndex:2 }}>
               <Cube3D size={isTablet ? 35 : 50} color="#6366f1" delay={0} />
