@@ -156,10 +156,13 @@ GTM_SCHEMA = """{
     {"tier":"Enterprise","price":"Custom","inclusions":["f1","f2","f3","f4"]}
   ],
   "channels":[{"name":"Content Marketing","priority":1,"cac":"$50-100"}],
-  "phases":[{
-    "phase":1,"title":"Foundation","months":"Month 1-2",
-    "goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]
-  }],
+  "phases":[
+    {"phase":1,"title":"Foundation","months":"Month 1-2","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
+    {"phase":2,"title":"Validation","months":"Month 3-4","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
+    {"phase":3,"title":"Growth","months":"Month 5-6","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
+    {"phase":4,"title":"Scale","months":"Month 7-9","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
+    {"phase":5,"title":"Leadership","months":"Month 10-12","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]}
+  ],
   "kpis":{"north_star":"string","mrr_6month":10000,"mrr_12month":50000,
            "cac":500,"ltv":5000,"churn_target":5,"revenue_12month":600000},
   "budget":[{"category":"Marketing","percentage":40},{"category":"Sales","percentage":30},
