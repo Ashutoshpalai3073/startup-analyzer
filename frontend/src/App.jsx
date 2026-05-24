@@ -33,7 +33,7 @@ export default function App() {
       }
       const data = await res.json();
       setAnalysis(data);
-      setStage("waiting");
+      setStage("dashboard");
     } catch (e) {
       if (e.name === "AbortError") {
         setError("Analysis timed out. Please try again.");
@@ -77,9 +77,9 @@ export default function App() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", minHeight: "100vh", background: "#050510" }}>
       {stage === "landing"   && <LandingPage onAnalyze={handleAnalyze} error={error} />}
-      {(stage === "loading" || stage === "waiting") && (
-        <LoadingScreen idea={idea} onComplete={() => stage === "waiting" && setStage("dashboard")} />
-      )}
+      {stage === "loading" && (
+  <LoadingScreen idea={idea} />
+)}
       {stage === "dashboard" && (
         <Dashboard analysis={analysis} onDownload={handleDownload} onReset={() => setStage("landing")} />
       )}
