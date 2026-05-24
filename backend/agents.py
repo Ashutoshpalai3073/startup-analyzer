@@ -219,13 +219,17 @@ def _run_swot(idea, llm, market_raw, comp_raw):
 
 def _run_gtm(idea, llm, swot_raw, fund_raw):
     ctx = f"SWOT priorities: {swot_raw[:400]}\nFunding: {fund_raw[:300]}"
-    return _run_single(
-        role      = "GTM Strategist",
-        goal      = f"Produce JSON GTM strategy for: {idea}",
-        backstory = "Product-led growth expert. Always responds in pure JSON.",
-        description = f"Design GTM for: {idea}\nContext:\n{ctx}\nReturn ONLY valid JSON:\n{GTM_SCHEMA}",
-        llm       = llm
+    prompt = f"Design GTM for: {idea}\nContext:\n{ctx}\nReturn ONLY valid JSON, no extra text:\n{GTM_SCHEMA}"
+    response = litellm.completion(
+        model="groq/llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": "You are a GTM strategist. Always respond with pure valid JSON only. No explanation, no markdown, no extra text."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=2000,
+        temperature=0.3,
     )
+    return response.choices[0].message.content or ""
 
 
 # ══════════════════════════════════════════════════════════════════════════════
