@@ -89,20 +89,35 @@ litellm.completion = _patched_completion
 def _extract_json(text: str) -> dict:
     if not text:
         return {}
-    m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except Exception:
-            pass
-    m = re.search(r'\{.*\}', text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group())
-        except Exception:
-            pass
+    # Clean common LLM artifacts
+    text = text.strip()
+    # Try direct parse first
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+    # Remove markdown code fences
+    text_clean = re.sub(r'```(?:json)?', '', text).replace('```', '').strip()
+    try:
+        return json.loads(text_clean)
+    except Exception:
+        pass
+    # Find outermost { } using bracket matching
+    start = text.find('{')
+    if start == -1:
+        return {}
+    depth = 0
+    for i, ch in enumerate(text[start:], start):
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start:i+1])
+                except Exception:
+                    return {}
     return {}
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SCHEMAS
