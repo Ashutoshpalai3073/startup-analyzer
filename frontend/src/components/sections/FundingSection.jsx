@@ -9,6 +9,12 @@ const STAGE_COLORS = {
   "Series F":"#ec4899",
 };
 
+// Truncate long strings for chart axis labels
+function truncate(str, n) {
+  if (!str) return "";
+  return str.length > n ? str.slice(0, n).trimEnd() + "…" : str;
+}
+
 export default function FundingSection({ data={} }) {
   const width    = useWindowWidth();
   const isMobile = width < 640;
@@ -23,11 +29,24 @@ export default function FundingSection({ data={} }) {
   const rec        = data.recommendations || {};
   const metrics    = data.investor_metrics || {};
 
+  // FIX 1 — separate display label (truncated) from full name (for tooltip)
+  const yAxisMaxChars = isMobile ? 11 : isTablet ? 14 : 18;
   const chartData = rounds.map(r => ({
-    company: r.company,
-    amount:  parseFloat((r.amount||"0").replace(/[^0-9.]/g,"")),
-    stage:   r.stage,
+    company:  r.company,                               // full name → used in tooltip
+    label:    truncate(r.company, yAxisMaxChars),      // short label → shown on axis
+    amount:   parseFloat((r.amount||"0").replace(/[^0-9.]/g,"")),
+    stage:    r.stage,
   }));
+
+  // FIX 2 — dynamic height: 42px per bar + 40px for axes, minimum 200px
+  const chartHeight = Math.max(200, rounds.length * 42 + 40);
+
+  // FIX 3 — y-axis wide enough to fit the truncated label at the chosen font size
+  //          ~7px per char is a safe estimate at fontSize 10
+  const yAxisWidth = Math.min(
+    isMobile ? 90 : 120,
+    yAxisMaxChars * 7 + 8
+  );
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
@@ -142,12 +161,29 @@ export default function FundingSection({ data={} }) {
 
         <Card>
           <h3 style={H3}>Funding Raised by Competitors ($M)</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={chartData} layout="vertical">
-              <XAxis type="number" stroke="#1f2937" tick={{ fill:"#475569", fontSize:10 }} tickFormatter={v=>`$${v}M`} />
-              <YAxis type="category" dataKey="company" stroke="#1f2937" tick={{ fill:"#475569", fontSize:10 }} width={isMobile ? 60 : 80} />
+          {/* FIX 2: height scales with number of rows */}
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart data={chartData} layout="vertical" margin={{ top:0, right:16, bottom:0, left:0 }}>
+              <XAxis
+                type="number"
+                stroke="#1f2937"
+                tick={{ fill:"#475569", fontSize:10 }}
+                tickFormatter={v=>`$${v}M`}
+              />
+              {/* FIX 1 & 3: use truncated `label` key, computed width */}
+              <YAxis
+                type="category"
+                dataKey="label"
+                stroke="#1f2937"
+                tick={{ fill:"#475569", fontSize:10 }}
+                width={yAxisWidth}
+              />
               <Tooltip
-                formatter={v=>[`$${v}M`,"Amount"]}
+                /* Show full company name in tooltip, not the truncated label */
+                labelFormatter={(_label, payload) =>
+                  payload?.[0]?.payload?.company ?? _label
+                }
+                formatter={v=>[`$${v}M`, "Amount"]}
                 contentStyle={{ background:"#1a1a3e", border:"1px solid rgba(99,102,241,0.35)", borderRadius:8 }}
                 labelStyle={{ color:"#ffffff" }}
                 itemStyle={{ color:"#ffffff" }}
