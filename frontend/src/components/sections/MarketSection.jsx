@@ -56,17 +56,17 @@ export default function MarketSection({ data={} }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
 
-      {/* Top metric cards — 2-col on mobile, 4-col on desktop */}
+      {/* ── Top metric cards ── */}
       <div style={{
         display:"grid",
         gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
         gap:"0.85rem",
       }}>
         {[
-          { label:"TAM",  value:`$${tam}B`,      sub: data.tam?.reasoning?.substring(0,55)+"…", color:"#6366f1" },
-          { label:"SAM",  value:`$${sam}B`,      sub: data.sam?.reasoning?.substring(0,55)+"…", color:"#8b5cf6" },
-          { label:"SOM",  value:`$${som}B`,      sub: data.som?.reasoning?.substring(0,55)+"…", color:"#06b6d4" },
-          { label:"CAGR", value:`${data.cagr}%`, sub:"Compound Annual Growth Rate",              color:"#f59e0b" },
+          { label:"TAM",  value:`$${tam}B`,      sub: data.tam?.reasoning, color:"#6366f1" },
+          { label:"SAM",  value:`$${sam}B`,      sub: data.sam?.reasoning, color:"#8b5cf6" },
+          { label:"SOM",  value:`$${som}B`,      sub: data.som?.reasoning, color:"#06b6d4" },
+          { label:"CAGR", value:`${data.cagr}%`, sub:"Compound Annual Growth Rate", color:"#f59e0b" },
         ].map((m,i) => (
           <motion.div key={i}
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
@@ -75,19 +75,47 @@ export default function MarketSection({ data={} }) {
             style={{
               background:`linear-gradient(135deg, rgba(${hexRgb(m.color)},0.09), rgba(${hexRgb(m.color)},0.03))`,
               border:`1px solid rgba(${hexRgb(m.color)},0.2)`,
-              borderRadius:14, padding: isMobile ? "0.85rem" : "1.1rem 1.2rem",
-              cursor:"default", transition:"all 0.3s ease",
+              borderRadius:14,
+              padding: isMobile ? "0.85rem" : "1.1rem 1.2rem",
+              cursor:"default",
+              transition:"all 0.3s ease",
+              /* let the card grow to fit its content — no fixed height */
+              display:"flex",
+              flexDirection:"column",
             }}
           >
-            <div style={{ color:"#475569", fontSize:"0.68rem", fontWeight:700,
-              textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.4rem" }}>{m.label}</div>
-            <div style={{ color:m.color, fontWeight:900, fontSize: isMobile ? "1.5rem" : "1.9rem", lineHeight:1, marginBottom:"0.4rem" }}>{m.value}</div>
-            <div style={{ color:"#374151", fontSize:"0.7rem", lineHeight:1.45 }}>{m.sub}</div>
+            {/* Label */}
+            <div style={{
+              color:"#475569", fontSize:"0.68rem", fontWeight:700,
+              textTransform:"uppercase", letterSpacing:"0.1em",
+              marginBottom:"0.4rem",
+            }}>{m.label}</div>
+
+            {/* Big value */}
+            <div style={{
+              color:m.color, fontWeight:900,
+              fontSize: isMobile ? "1.5rem" : "1.9rem",
+              lineHeight:1, marginBottom:"0.5rem",
+            }}>{m.value}</div>
+
+            {/* Sub-text — CSS clamp to 3 lines, no mid-word JS cuts */}
+            {m.sub && (
+              <div style={{
+                color:"#6b7280",
+                fontSize:"0.72rem",
+                lineHeight:1.55,
+                /* CSS multi-line clamp */
+                display:"-webkit-box",
+                WebkitLineClamp:3,
+                WebkitBoxOrient:"vertical",
+                overflow:"hidden",
+              }}>{m.sub}</div>
+            )}
           </motion.div>
         ))}
       </div>
 
-      {/* Charts row — stack on mobile */}
+      {/* ── Charts row ── */}
       <div style={{
         display:"grid",
         gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
@@ -131,8 +159,8 @@ export default function MarketSection({ data={} }) {
           <h3 style={H3}>Growth Trajectory ($B)</h3>
           <div style={{ display:"flex", gap:"0.75rem", marginBottom:"0.75rem", flexWrap:"wrap" }}>
             {[
-              [data.cagr+"%", "CAGR", "#f59e0b"],
-              ["$"+data.five_year_projection+"B", "5-Year", "#10b981"],
+              [data.cagr+"%",                    "CAGR",    "#f59e0b"],
+              ["$"+data.five_year_projection+"B","5-Year",  "#10b981"],
               ["$"+data.ten_year_projection+"B", "10-Year", "#6366f1"],
             ].map(([val,label,color]) => (
               <div key={label} style={{
@@ -164,7 +192,7 @@ export default function MarketSection({ data={} }) {
         </Card>
       </div>
 
-      {/* Overview + drivers — stack on mobile */}
+      {/* ── Overview + drivers ── */}
       <div style={{
         display:"grid",
         gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
@@ -208,7 +236,7 @@ export default function MarketSection({ data={} }) {
         </Card>
       </div>
 
-      {/* Customer Segments — responsive grid */}
+      {/* ── Customer Segments ── */}
       <Card>
         <h3 style={H3}>Customer Segments</h3>
         <div style={{
@@ -285,7 +313,7 @@ export default function MarketSection({ data={} }) {
         </div>
       </Card>
 
-      {/* Market Risks */}
+      {/* ── Market Risks ── */}
       <Card>
         <h3 style={H3}>Market Risks</h3>
         <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
@@ -304,18 +332,20 @@ export default function MarketSection({ data={} }) {
                 padding:"0.75rem 1rem",
               }}>
                 <span style={{
+                  display:"inline-flex", alignItems:"center", justifyContent:"center",
                   background:`rgba(${hexRgb(color)},0.1)`,
                   border:`1px solid rgba(${hexRgb(color)},0.25)`,
-                  color, borderRadius:7, padding:"0.18rem 0.65rem",
+                  color, borderRadius:7, padding:"0.25rem 0.65rem",
                   fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase",
-                  whiteSpace:"nowrap", alignSelf:"flex-start",
+                  whiteSpace:"nowrap", alignSelf:"flex-start", lineHeight:1,
                 }}>{r.type}</span>
                 <span style={{ color:"#6b7280", fontSize:"0.85rem", lineHeight:1.5, flex:1 }}>{r.risk}</span>
                 <span style={{
+                  display:"inline-flex", alignItems:"center", justifyContent:"center",
                   background:`rgba(${hexRgb(color)},0.08)`,
                   color, fontSize:"0.68rem", fontWeight:700,
-                  borderRadius:6, padding:"0.15rem 0.55rem", whiteSpace:"nowrap",
-                  alignSelf: isMobile ? "flex-start" : "center",
+                  borderRadius:6, padding:"0.2rem 0.55rem", whiteSpace:"nowrap",
+                  alignSelf: isMobile ? "flex-start" : "center", lineHeight:1,
                 }}>
                   {i===0 ? "High Impact" : i===1 ? "Med Impact" : "Low Impact"}
                 </span>
