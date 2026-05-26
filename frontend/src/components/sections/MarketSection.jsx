@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import Card from "./Card";
 import { useWindowWidth } from "../../useWindowWidth";
@@ -122,27 +122,10 @@ export default function MarketSection({ data={} }) {
         gap:"1.25rem",
       }}>
         <Card>
-          <h3 style={H3}>Market Share Breakdown</h3>
-          {/* Wrap in explicit-height div — fixes ResponsiveContainer losing its
-              width reference inside a flex parent on mobile browsers */}
-          <div style={{ width:"100%", height: isMobile ? 200 : 190 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={tamSamSom} cx="50%" cy="50%"
-                  innerRadius={isMobile ? 44 : 52}
-                  outerRadius={isMobile ? 68 : 82}
-                  dataKey="value" paddingAngle={3}>
-                  {tamSamSom.map((_,i) => (
-                    <Cell key={i} fill={COLORS[i]}
-                      style={{ filter:`drop-shadow(0 0 6px ${COLORS[i]}60)` }} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend formatter={v => <span style={{ color:"#94a3b8", fontSize:"0.78rem" }}>{v}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:"0.4rem", marginTop:"0.5rem" }}>
+          <h3 style={H3}>Market Size Breakdown</h3>
+          {/* Concentric circles — the correct way to visualise TAM › SAM › SOM */}
+          <ConcentricCircles tam={tam} sam={sam} som={som} isMobile={isMobile} />
+          <div style={{ display:"flex", flexDirection:"column", gap:"0.4rem", marginTop:"1rem" }}>
             {tamSamSom.map((item,i) => (
               <div key={i} style={{
                 display:"flex", gap:"0.5rem", alignItems:"flex-start",
@@ -359,6 +342,75 @@ export default function MarketSection({ data={} }) {
           })}
         </div>
       </Card>
+    </div>
+  );
+}
+
+// ── Concentric circles: correct TAM › SAM › SOM visualisation ──────────────
+function ConcentricCircles({ tam, sam, som, isMobile }) {
+  const size   = isMobile ? 200 : 240;
+  const cx     = size / 2;
+  const cy     = size / 2;
+  const rTAM   = size * 0.43;
+  const rSAM   = size * 0.29;
+  const rSOM   = size * 0.17;
+
+  const labels = [
+    { r: rTAM, color:"#6366f1", label:"TAM", value:`$${tam}B` },
+    { r: rSAM, color:"#8b5cf6", label:"SAM", value:`$${sam}B` },
+    { r: rSOM, color:"#06b6d4", label:"SOM", value:`$${som}B` },
+  ];
+
+  return (
+    <div style={{ display:"flex", justifyContent:"center" }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <defs>
+          {labels.map((l,i) => (
+            <radialGradient key={i} id={`cg${i}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stopColor={l.color} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={l.color} stopOpacity={0.08} />
+            </radialGradient>
+          ))}
+          {labels.map((l,i) => (
+            <filter key={i} id={`glow${i}`}>
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          ))}
+        </defs>
+
+        {/* Draw outer → inner so smaller circles sit on top */}
+        {[...labels].reverse().map((l,ri) => {
+          const i = labels.length - 1 - ri;
+          return (
+            <g key={i}>
+              <circle
+                cx={cx} cy={cy} r={l.r}
+                fill={`url(#cg${i})`}
+                stroke={l.color}
+                strokeWidth={1.5}
+                filter={`url(#glow${i})`}
+              />
+              {/* Label inside each circle */}
+              <text
+                x={cx} y={cy - l.r * 0.28}
+                textAnchor="middle"
+                fill={l.color}
+                fontSize={isMobile ? 9 : 10}
+                fontWeight={700}
+                letterSpacing="0.08em"
+              >{l.label}</text>
+              <text
+                x={cx} y={cy - l.r * 0.28 + (isMobile ? 13 : 15)}
+                textAnchor="middle"
+                fill="#f1f5f9"
+                fontSize={isMobile ? 11 : 13}
+                fontWeight={900}
+              >{l.value}</text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

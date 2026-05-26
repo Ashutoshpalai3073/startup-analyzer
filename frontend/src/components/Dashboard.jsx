@@ -46,8 +46,11 @@ export default function Dashboard({ analysis, onDownload, onReset }) {
         boxShadow:"0 4px 30px rgba(0,0,0,0.3)",
         gap:"0.5rem",
       }}>
-        {/* Logo + idea */}
-        <div style={{ display:"flex", alignItems:"center", gap:"0.75rem", minWidth:0, flex:1 }}>
+        {/* Logo + idea — click to go back to landing */}
+        <div
+          onClick={onReset}
+          style={{ display:"flex", alignItems:"center", gap:"0.75rem", minWidth:0, flex:1, cursor:"pointer" }}
+        >
           <div style={{
             width:34, height:34, borderRadius:9,
             background:"linear-gradient(135deg,#6366f1,#8b5cf6)",

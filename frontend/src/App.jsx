@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LandingPage from "./components/LandingPage";
 import LoadingScreen from "./components/LoadingScreen";
 import Dashboard from "./components/Dashboard";
@@ -10,6 +10,24 @@ export default function App() {
   const [analysis, setAnalysis] = useState(null);
   const [idea, setIdea]         = useState("");
   const [error, setError]       = useState("");
+
+  // ── Push a history entry when entering dashboard so the mobile
+  //    hardware back button pops it instead of closing the app ──────────────
+  useEffect(() => {
+    if (stage === "dashboard") {
+      window.history.pushState({ stage: "dashboard" }, "");
+    }
+  }, [stage]);
+
+  useEffect(() => {
+    const handlePop = () => {
+      // User pressed the hardware/browser back button
+      setStage("landing");
+      setAnalysis(null);
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   const handleAnalyze = async (startupIdea) => {
     setIdea(startupIdea);
