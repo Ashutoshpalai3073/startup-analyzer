@@ -123,7 +123,7 @@ export default function MarketSection({ data={} }) {
       }}>
         <Card>
           <h3 style={H3}>Market Share Breakdown</h3>
-          <ResponsiveContainer width="100%" height={190}>
+          <ResponsiveContainer width="100%" height={isMobile ? 160 : 190}>
             <PieChart>
               <Pie data={tamSamSom} cx="50%" cy="50%"
                 innerRadius={52} outerRadius={82}
