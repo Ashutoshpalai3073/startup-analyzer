@@ -125,9 +125,9 @@ def _extract_json(text: str) -> dict:
 MARKET_SCHEMA = """{
   "overview": "string", "problem_solved": "string",
   "key_drivers": ["d1","d2","d3"],
-  "tam": {"value": 50.0, "reasoning": "string"},
-  "sam": {"value": 15.0, "reasoning": "string"},
-  "som": {"value": 2.0,  "reasoning": "string"},
+  "tam": {"value": 50.0, "reasoning": "One concise sentence, max 120 characters."},
+  "sam": {"value": 15.0, "reasoning": "One concise sentence, max 120 characters."},
+  "som": {"value": 2.0,  "reasoning": "One concise sentence, max 120 characters."},
   "current_market_size": 30.0, "five_year_projection": 70.0,
   "ten_year_projection": 150.0, "cagr": 18.5,
   "segments": [{"name":"string","size":"string","pain_points":["p1","p2"]}],

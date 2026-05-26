@@ -31,7 +31,7 @@ export default function CompetitorSection({ data = {} }) {
             style={{
               background: `linear-gradient(135deg, rgba(${hexRgb(color)},0.08), rgba(${hexRgb(color)},0.03))`,
               border: `1px solid rgba(${hexRgb(color)},0.2)`,
-              borderRadius: 14, padding: "0.9rem 1.25rem",
+              borderRadius: 14, padding: "0.9rem 1.1rem",
               cursor: "default", transition: "all 0.3s",
             }}>
             <div style={{ color: "#374151", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</div>
@@ -55,10 +55,12 @@ export default function CompetitorSection({ data = {} }) {
           {/* ── Header row: name + chips ── */}
           <div style={{
             display: "flex",
+            /* On mobile: always stack vertically so chips are ALWAYS below the name,
+               never randomly to the right depending on text length */
+            flexDirection: isMobile ? "column" : "row",
             justifyContent: "space-between",
-            alignItems: "center",          /* ← vertically centers chips with the name block */
-            flexWrap: "wrap",
-            gap: "0.75rem",
+            alignItems: isMobile ? "flex-start" : "center",
+            gap: isMobile ? "0.5rem" : "0.75rem",
             marginBottom: "0.85rem",
           }}>
             <div>
@@ -66,12 +68,12 @@ export default function CompetitorSection({ data = {} }) {
               <span style={{ color: "#374151", fontSize: "0.78rem" }}>Founded {c.founded} · {c.target_customer}</span>
             </div>
 
-            {/* ── Chips wrapper ── */}
+            {/* ── Chips always left-aligned on mobile ── */}
             <div style={{
               display: "flex",
               gap: "0.5rem",
               flexWrap: "wrap",
-              alignItems: "center",        /* ← keeps chips aligned with each other */
+              alignItems: "center",
             }}>
               <Chip color="#10b981">{c.funding}</Chip>
               <Chip color="#f59e0b">{c.pricing}</Chip>

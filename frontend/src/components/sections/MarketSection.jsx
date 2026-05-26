@@ -61,6 +61,7 @@ export default function MarketSection({ data={} }) {
         display:"grid",
         gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
         gap:"0.85rem",
+        alignItems:"stretch",   /* all cards same height — tallest sets the row */
       }}>
         {[
           { label:"TAM",  value:`$${tam}B`,      sub: data.tam?.reasoning, color:"#6366f1" },
@@ -79,7 +80,6 @@ export default function MarketSection({ data={} }) {
               padding: isMobile ? "0.85rem" : "1.1rem 1.2rem",
               cursor:"default",
               transition:"all 0.3s ease",
-              /* let the card grow to fit its content — no fixed height */
               display:"flex",
               flexDirection:"column",
             }}
@@ -98,15 +98,15 @@ export default function MarketSection({ data={} }) {
               lineHeight:1, marginBottom:"0.5rem",
             }}>{m.value}</div>
 
-            {/* Sub-text — CSS clamp to 3 lines, no mid-word JS cuts */}
+            {/* Sub-text: clamped to 4 lines so cards stay uniform and
+                sentences don't get cut mid-word on most screen widths */}
             {m.sub && (
               <div style={{
                 color:"#6b7280",
                 fontSize:"0.72rem",
                 lineHeight:1.55,
-                /* CSS multi-line clamp */
                 display:"-webkit-box",
-                WebkitLineClamp:3,
+                WebkitLineClamp:4,
                 WebkitBoxOrient:"vertical",
                 overflow:"hidden",
               }}>{m.sub}</div>
@@ -123,20 +123,25 @@ export default function MarketSection({ data={} }) {
       }}>
         <Card>
           <h3 style={H3}>Market Share Breakdown</h3>
-          <ResponsiveContainer width="100%" height={isMobile ? 160 : 190}>
-            <PieChart>
-              <Pie data={tamSamSom} cx="50%" cy="50%"
-                innerRadius={52} outerRadius={82}
-                dataKey="value" paddingAngle={3}>
-                {tamSamSom.map((_,i) => (
-                  <Cell key={i} fill={COLORS[i]}
-                    style={{ filter:`drop-shadow(0 0 6px ${COLORS[i]}60)` }} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend formatter={v => <span style={{ color:"#94a3b8", fontSize:"0.78rem" }}>{v}</span>} />
-            </PieChart>
-          </ResponsiveContainer>
+          {/* Wrap in explicit-height div — fixes ResponsiveContainer losing its
+              width reference inside a flex parent on mobile browsers */}
+          <div style={{ width:"100%", height: isMobile ? 200 : 190 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={tamSamSom} cx="50%" cy="50%"
+                  innerRadius={isMobile ? 44 : 52}
+                  outerRadius={isMobile ? 68 : 82}
+                  dataKey="value" paddingAngle={3}>
+                  {tamSamSom.map((_,i) => (
+                    <Cell key={i} fill={COLORS[i]}
+                      style={{ filter:`drop-shadow(0 0 6px ${COLORS[i]}60)` }} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend formatter={v => <span style={{ color:"#94a3b8", fontSize:"0.78rem" }}>{v}</span>} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
           <div style={{ display:"flex", flexDirection:"column", gap:"0.4rem", marginTop:"0.5rem" }}>
             {tamSamSom.map((item,i) => (
               <div key={i} style={{
