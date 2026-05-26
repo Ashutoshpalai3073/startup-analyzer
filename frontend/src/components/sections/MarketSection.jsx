@@ -67,7 +67,7 @@ export default function MarketSection({ data={} }) {
           { label:"TAM",  value:`$${tam}B`,      sub: data.tam?.reasoning, color:"#6366f1" },
           { label:"SAM",  value:`$${sam}B`,      sub: data.sam?.reasoning, color:"#8b5cf6" },
           { label:"SOM",  value:`$${som}B`,      sub: data.som?.reasoning, color:"#06b6d4" },
-          { label:"CAGR", value:`${data.cagr}%`, sub:"Compound Annual Growth Rate", color:"#f59e0b" },
+          { label:"CAGR", value:`${data.cagr}%`, sub:"Annual Growth Rate", color:"#f59e0b" },
         ].map((m,i) => (
           <motion.div key={i}
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
@@ -98,15 +98,15 @@ export default function MarketSection({ data={} }) {
               lineHeight:1, marginBottom:"0.5rem",
             }}>{m.value}</div>
 
-            {/* Sub-text: clamped to 4 lines so cards stay uniform and
-                sentences don't get cut mid-word on most screen widths */}
-            {m.sub && (
+            {/* Sub-text: hidden on mobile (redundant — shown in TAM/SAM/SOM rows below).
+                On desktop clamped to 2 lines so all 4 cards stay same height */}
+            {m.sub && !isMobile && (
               <div style={{
                 color:"#6b7280",
                 fontSize:"0.72rem",
-                lineHeight:1.55,
+                lineHeight:1.45,
                 display:"-webkit-box",
-                WebkitLineClamp:4,
+                WebkitLineClamp:2,
                 WebkitBoxOrient:"vertical",
                 overflow:"hidden",
               }}>{m.sub}</div>

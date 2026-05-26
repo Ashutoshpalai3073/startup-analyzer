@@ -250,31 +250,45 @@ def _run_with_json_retry(run_fn, label: str, schema: str, idea: str, max_parse_r
 # SCHEMAS
 # ══════════════════════════════════════════════════════════════════════════════
 MARKET_SCHEMA = """{
-  "overview": "string", "problem_solved": "string",
-  "key_drivers": ["d1","d2","d3"],
-  "tam": {"value": 50.0, "reasoning": "Max 60 chars. One fragment, no full stop. E.g. 'Global addressable market across all segments'"},
-  "sam": {"value": 15.0, "reasoning": "Max 60 chars. One fragment, no full stop. E.g. 'Online segment in target geographies'"},
-  "som": {"value": 2.0,  "reasoning": "Max 60 chars. One fragment, no full stop. E.g. 'Initial capture in core metro markets'"},
-  "current_market_size": 30.0, "five_year_projection": 70.0,
-  "ten_year_projection": 150.0, "cagr": 18.5,
+  "overview": "string",
+  "problem_solved": "string",
+  "key_drivers": ["driver1","driver2","driver3"],
+  "tam": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars. E.g. 'Entire global fragrance industry'"},
+  "sam": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars. E.g. 'Online luxury segment in Asia-Pacific'"},
+  "som": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars. E.g. 'D2C channel, metro India, year 1-3'"},
+  "current_market_size": <REAL_FLOAT>,
+  "five_year_projection": <REAL_FLOAT>,
+  "ten_year_projection": <REAL_FLOAT>,
+  "cagr": <REAL_FLOAT>,
   "market_trends": [
-    {"num": "1", "title": "Growth Driver", "insight": "Must include a specific number or % stat. Max 90 chars. E.g. 'Market expanding at 18.5% CAGR, driven by mobile-first adoption across Tier 1 cities.'"},
-    {"num": "2", "title": "Market Shift",  "insight": "Must include a specific number or % stat. Max 90 chars. E.g. 'Online channel now accounts for 62% of total category revenue, up from 38% in 2021.'"},
-    {"num": "3", "title": "Key Tailwind",  "insight": "Must include a specific number or % stat. Max 90 chars. E.g. '$4.2B in VC funding entered this space in 2024, signalling strong investor conviction.'"}
+    {"num": "1", "title": "Growth Driver", "insight": "Specific % or $ stat for THIS market. Max 80 chars."},
+    {"num": "2", "title": "Market Shift",  "insight": "Specific % or $ stat for THIS market. Max 80 chars."},
+    {"num": "3", "title": "Key Tailwind",  "insight": "Specific % or $ stat for THIS market. Max 80 chars."}
   ],
   "segments": [{"name":"string","size":"string","pain_points":["p1","p2"]}],
-  "risks": [{"risk":"string","type":"regulatory"}]
-}"""
+  "risks": [{"risk":"string","type":"regulatory|competitive|market|technology|operational"}]
+}
+CRITICAL RULES:
+- ALL numeric values (tam, sam, som, cagr, projections) MUST be researched estimates specific to THIS startup idea. Never use placeholder numbers.
+- landscape_type and competition_level MUST reflect actual market reality, not generic defaults.
+- reasoning fields MUST be under 40 characters to fit mobile UI."""
 
 COMPETITOR_SCHEMA = """{
-  "landscape_type":"red ocean","competition_level":"fragmented",
+  "landscape_type": "<actual market type: Blue Ocean|Red Ocean|Emerging|Niche — pick the TRUE one for this market>",
+  "competition_level": "<actual level: Fragmented|Consolidated|Duopoly|Monopolistic|Nascent — pick the TRUE one>",
   "competitors": [{
-    "name":"Co","founded":2020,"funding":"$10M","product":"string",
-    "pricing":"$X/mo","usps":["u1","u2"],"weaknesses":["w1","w2"],
-    "target_customer":"string"
+    "name":"ActualCompanyName",
+    "founded": <real_year>,
+    "funding": "<real funding amount or 'Bootstrapped' or 'Publicly Traded'>",
+    "product": "string",
+    "pricing": "<real pricing>",
+    "usps": ["real_usp1","real_usp2"],
+    "weaknesses": ["real_weakness1","real_weakness2"],
+    "target_customer": "string"
   }],
-  "gaps":["gap1","gap2","gap3"]
-}"""
+  "gaps": ["specific_gap1","specific_gap2","specific_gap3"]
+}
+CRITICAL: landscape_type and competition_level MUST be researched and unique to this specific market. Never default to 'red ocean' or 'fragmented' unless truly accurate."""
 
 FUNDING_SCHEMA = """{
   "overview":"string","sentiment":"bullish","total_investment":"$2B",
@@ -335,11 +349,22 @@ def _run_single(role, goal, backstory, description, llm) -> str:
 def _run_market(idea, llm):
     def _call():
         return _run_single(
-            role        = "Market Research Analyst",
-            goal        = f"Produce JSON market analysis for: {idea}",
-            backstory   = "Senior market analyst. Always responds in pure JSON.",
-            description = f"Analyze market for: {idea}\nReturn ONLY valid JSON:\n{MARKET_SCHEMA}",
-            llm         = llm,
+            role      = "Market Research Analyst",
+            goal      = f"Produce a UNIQUE, RESEARCH-BASED JSON market analysis specifically for: {idea}",
+            backstory = (
+                "You are a senior market analyst at McKinsey. "
+                "You always produce precise, startup-specific market estimates based on real industry data. "
+                "You NEVER copy example values from schemas. Every number you output is researched and unique to the query. "
+                "You respond only in pure JSON."
+            ),
+            description = (
+                f"Research and analyze the market for this specific startup: {idea}\n"
+                f"IMPORTANT: Generate UNIQUE numeric estimates (TAM, SAM, SOM, CAGR, projections) "
+                f"based on real market research for THIS specific industry and idea. "
+                f"Do NOT use placeholder or example values from the schema.\n"
+                f"Return ONLY valid JSON:\n{MARKET_SCHEMA}"
+            ),
+            llm = llm,
         )
     return _run_with_json_retry(_call, "market", MARKET_SCHEMA, idea)
 
@@ -347,11 +372,23 @@ def _run_market(idea, llm):
 def _run_competitor(idea, llm):
     def _call():
         return _run_single(
-            role        = "Competitive Intelligence Analyst",
-            goal        = f"Produce JSON competitive analysis for: {idea}",
-            backstory   = "Competitive intelligence specialist. Always responds in pure JSON.",
-            description = f"Analyze top 5 competitors for: {idea}\nReturn ONLY valid JSON:\n{COMPETITOR_SCHEMA}",
-            llm         = llm,
+            role      = "Competitive Intelligence Analyst",
+            goal      = f"Produce a UNIQUE, RESEARCH-BASED JSON competitive analysis for: {idea}",
+            backstory = (
+                "You are a competitive intelligence specialist at a top VC firm. "
+                "You identify REAL competitors with accurate funding, pricing, and positioning data. "
+                "You NEVER default to generic labels like 'red ocean' or 'fragmented' — "
+                "you research the actual competitive dynamics of each specific market. "
+                "You respond only in pure JSON."
+            ),
+            description = (
+                f"Research and analyze the competitive landscape for this specific startup: {idea}\n"
+                f"IMPORTANT: landscape_type and competition_level MUST reflect actual market reality "
+                f"for THIS specific industry — do not default to generic values. "
+                f"Name REAL competitors with accurate details.\n"
+                f"Return ONLY valid JSON:\n{COMPETITOR_SCHEMA}"
+            ),
+            llm = llm,
         )
     return _run_with_json_retry(_call, "competitors", COMPETITOR_SCHEMA, idea)
 
