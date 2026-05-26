@@ -125,17 +125,22 @@ export default function MarketSection({ data={} }) {
           <h3 style={H3}>Market Size Breakdown</h3>
           {/* Concentric circles — the correct way to visualise TAM › SAM › SOM */}
           <ConcentricCircles tam={tam} sam={sam} som={som} isMobile={isMobile} />
-          <div style={{ display:"flex", flexDirection:"column", gap:"0.4rem", marginTop:"1rem" }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:"0.35rem", marginTop:"1rem" }}>
             {tamSamSom.map((item,i) => (
               <div key={i} style={{
-                display:"flex", gap:"0.5rem", alignItems:"flex-start",
+                display:"flex", gap:"0.5rem", alignItems:"center",
                 padding:"0.4rem 0.65rem",
                 background:`rgba(${hexRgb(COLORS[i])},0.06)`,
                 borderRadius:7, borderLeft:`2px solid ${COLORS[i]}`,
               }}>
-                <span style={{ color:COLORS[i], fontWeight:700, fontSize:"0.72rem",
-                  flexShrink:0, marginTop:"0.1rem" }}>{item.name}</span>
-                <span style={{ color:"#374151", fontSize:"0.72rem", lineHeight:1.4 }}>
+                <span style={{
+                  color:COLORS[i], fontWeight:700, fontSize:"0.72rem",
+                  flexShrink:0, whiteSpace:"nowrap",
+                }}>{item.name}</span>
+                <span style={{
+                  color:"#6b7280", fontSize:"0.72rem", lineHeight:1,
+                  whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                }}>
                   {data[item.name.toLowerCase()]?.reasoning || ""}
                 </span>
               </div>
@@ -178,35 +183,40 @@ export default function MarketSection({ data={} }) {
             </AreaChart>
           </ResponsiveContainer>
 
-          {/* ── Market Trend Insights ── */}
+          {/* ── Market Trend Insights — same row height as TAM/SAM/SOM rows ── */}
           {(data.market_trends||[]).length > 0 && (
-            <div style={{ display:"flex", flexDirection:"column", gap:"0.5rem", marginTop:"1rem" }}>
-              <div style={{ color:"#374151", fontSize:"0.62rem", fontWeight:700,
-                textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.1rem" }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:"0.35rem", marginTop:"1rem" }}>
+              <div style={{
+                color:"#374151", fontSize:"0.62rem", fontWeight:700,
+                textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.15rem",
+              }}>
                 Market Trend Insights
               </div>
-              {data.market_trends.map((t, i) => (
-                <div key={i} style={{
-                  display:"flex", gap:"0.75rem", alignItems:"flex-start",
-                  background:"rgba(99,102,241,0.05)",
-                  border:"1px solid rgba(99,102,241,0.1)",
-                  borderLeft:`3px solid ${["#6366f1","#8b5cf6","#06b6d4"][i]}`,
-                  borderRadius:"0 10px 10px 0",
-                  padding:"0.65rem 0.9rem",
-                }}>
-                  <span style={{ fontSize:"1rem", flexShrink:0, lineHeight:1.4 }}>{t.icon}</span>
-                  <div>
-                    <div style={{ color:["#6366f1","#8b5cf6","#06b6d4"][i],
-                      fontSize:"0.7rem", fontWeight:700, marginBottom:"0.2rem",
-                      textTransform:"uppercase", letterSpacing:"0.07em" }}>
-                      {t.title}
-                    </div>
-                    <div style={{ color:"#94a3b8", fontSize:"0.82rem", lineHeight:1.55 }}>
-                      {t.insight}
-                    </div>
+              {data.market_trends.map((t, i) => {
+                const accent = ["#6366f1","#8b5cf6","#06b6d4"][i];
+                return (
+                  <div key={i} style={{
+                    display:"flex", gap:"0.5rem", alignItems:"center",
+                    padding:"0.4rem 0.65rem",        /* ← identical to TAM/SAM/SOM rows */
+                    background:`rgba(${hexRgb(accent)},0.06)`,
+                    borderRadius:7,
+                    borderLeft:`2px solid ${accent}`, /* ← same border width */
+                    minWidth:0,
+                  }}>
+                    {/* Number — same font size as the TAM/SAM/SOM label */}
+                    <span style={{
+                      color:accent, fontWeight:700, fontSize:"0.72rem",
+                      flexShrink:0, whiteSpace:"nowrap",
+                    }}>{i + 1}</span>
+                    {/* Insight — single line, truncates on narrow screens */}
+                    <span style={{
+                      color:"#6b7280", fontSize:"0.72rem", lineHeight:1,
+                      flex:1, minWidth:0,
+                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                    }}>{t.insight}</span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
