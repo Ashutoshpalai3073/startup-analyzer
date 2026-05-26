@@ -177,6 +177,38 @@ export default function MarketSection({ data={} }) {
                 fill="url(#mktGrad)" dot={{ fill:"#6366f1", r:5, strokeWidth:0 }} />
             </AreaChart>
           </ResponsiveContainer>
+
+          {/* ── Market Trend Insights ── */}
+          {(data.market_trends||[]).length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:"0.5rem", marginTop:"1rem" }}>
+              <div style={{ color:"#374151", fontSize:"0.62rem", fontWeight:700,
+                textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.1rem" }}>
+                Market Trend Insights
+              </div>
+              {data.market_trends.map((t, i) => (
+                <div key={i} style={{
+                  display:"flex", gap:"0.75rem", alignItems:"flex-start",
+                  background:"rgba(99,102,241,0.05)",
+                  border:"1px solid rgba(99,102,241,0.1)",
+                  borderLeft:`3px solid ${["#6366f1","#8b5cf6","#06b6d4"][i]}`,
+                  borderRadius:"0 10px 10px 0",
+                  padding:"0.65rem 0.9rem",
+                }}>
+                  <span style={{ fontSize:"1rem", flexShrink:0, lineHeight:1.4 }}>{t.icon}</span>
+                  <div>
+                    <div style={{ color:["#6366f1","#8b5cf6","#06b6d4"][i],
+                      fontSize:"0.7rem", fontWeight:700, marginBottom:"0.2rem",
+                      textTransform:"uppercase", letterSpacing:"0.07em" }}>
+                      {t.title}
+                    </div>
+                    <div style={{ color:"#94a3b8", fontSize:"0.82rem", lineHeight:1.55 }}>
+                      {t.insight}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -346,67 +378,76 @@ export default function MarketSection({ data={} }) {
   );
 }
 
-// ── Concentric circles: correct TAM › SAM › SOM visualisation ──────────────
+// ── Concentric circles: TAM label in outer ring, SAM in middle, SOM in center ─
 function ConcentricCircles({ tam, sam, som, isMobile }) {
-  const size   = isMobile ? 200 : 240;
-  const cx     = size / 2;
-  const cy     = size / 2;
-  const rTAM   = size * 0.43;
-  const rSAM   = size * 0.29;
-  const rSOM   = size * 0.17;
+  const size = isMobile ? 220 : 260;
+  const cx   = size / 2;
+  const cy   = size / 2;
+  const rTAM = size * 0.44;
+  const rSAM = size * 0.30;
+  const rSOM = size * 0.17;
 
-  const labels = [
+  // Each label is positioned at the TOP of its own ring band:
+  // TAM ring = rSAM..rTAM  → label sits in the upper part of that band
+  // SAM ring = rSOM..rSAM  → label sits in the upper part of that band
+  // SOM      = 0..rSOM     → label sits in the center
+  const labelY = {
+    TAM: cy - (rTAM + rSAM) / 2,      // midpoint of TAM ring from center
+    SAM: cy - (rSAM + rSOM) / 2,      // midpoint of SAM ring from center
+    SOM: cy - rSOM * 0.30,             // upper-center of SOM circle
+  };
+
+  const circles = [
     { r: rTAM, color:"#6366f1", label:"TAM", value:`$${tam}B` },
     { r: rSAM, color:"#8b5cf6", label:"SAM", value:`$${sam}B` },
     { r: rSOM, color:"#06b6d4", label:"SOM", value:`$${som}B` },
   ];
 
+  const fs     = isMobile ? 8  : 9;
+  const fsVal  = isMobile ? 11 : 13;
+  const gap    = isMobile ? 12 : 14;
+
   return (
     <div style={{ display:"flex", justifyContent:"center" }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
-          {labels.map((l,i) => (
-            <radialGradient key={i} id={`cg${i}`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%"   stopColor={l.color} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={l.color} stopOpacity={0.08} />
+          {circles.map((c,i) => (
+            <radialGradient key={i} id={`ccg${i}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stopColor={c.color} stopOpacity={0.4} />
+              <stop offset="100%" stopColor={c.color} stopOpacity={0.07} />
             </radialGradient>
           ))}
-          {labels.map((l,i) => (
-            <filter key={i} id={`glow${i}`}>
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          {circles.map((_,i) => (
+            <filter key={i} id={`cgl${i}`}>
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
           ))}
         </defs>
 
-        {/* Draw outer → inner so smaller circles sit on top */}
-        {[...labels].reverse().map((l,ri) => {
-          const i = labels.length - 1 - ri;
+        {/* Draw from largest to smallest so inner circles render on top */}
+        {[...circles].reverse().map((c, ri) => {
+          const i  = circles.length - 1 - ri;
+          const ly = labelY[c.label];
           return (
             <g key={i}>
               <circle
-                cx={cx} cy={cy} r={l.r}
-                fill={`url(#cg${i})`}
-                stroke={l.color}
-                strokeWidth={1.5}
-                filter={`url(#glow${i})`}
+                cx={cx} cy={cy} r={c.r}
+                fill={`url(#ccg${i})`}
+                stroke={c.color} strokeWidth={1.5}
+                filter={`url(#cgl${i})`}
               />
-              {/* Label inside each circle */}
-              <text
-                x={cx} y={cy - l.r * 0.28}
-                textAnchor="middle"
-                fill={l.color}
-                fontSize={isMobile ? 9 : 10}
-                fontWeight={700}
-                letterSpacing="0.08em"
-              >{l.label}</text>
-              <text
-                x={cx} y={cy - l.r * 0.28 + (isMobile ? 13 : 15)}
-                textAnchor="middle"
-                fill="#f1f5f9"
-                fontSize={isMobile ? 11 : 13}
-                fontWeight={900}
-              >{l.value}</text>
+              {/* Label name */}
+              <text x={cx} y={ly}
+                textAnchor="middle" dominantBaseline="middle"
+                fill={c.color} fontSize={fs} fontWeight={700}
+                letterSpacing="0.1em"
+              >{c.label}</text>
+              {/* Value below label */}
+              <text x={cx} y={ly + gap}
+                textAnchor="middle" dominantBaseline="middle"
+                fill="#f1f5f9" fontSize={fsVal} fontWeight={900}
+              >{c.value}</text>
             </g>
           );
         })}

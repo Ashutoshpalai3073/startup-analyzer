@@ -174,16 +174,16 @@ export default function GtmSection({ data={} }) {
         </Card>
       </div>
 
-      {/* GTM Channels — responsive */}
+      {/* GTM Channels — always exactly 3 */}
       {(data.channels||[]).length > 0 && (
         <Card>
           <h3 style={H3}>GTM Channels</h3>
           <div style={{
             display:"grid",
-            gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3,1fr)",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)",
             gap:"0.85rem",
           }}>
-            {(data.channels||[]).sort((a,b)=>a.priority-b.priority).map((ch,i) => (
+            {(data.channels||[]).slice(0,3).sort((a,b)=>a.priority-b.priority).map((ch,i) => (
               <div key={i} style={{
                 background: i===0 ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.02)",
                 border:`1px solid ${i===0 ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)"}`,
@@ -230,17 +230,17 @@ export default function GtmSection({ data={} }) {
                     <div style={{ color:"#374151", fontSize:"0.6rem", textTransform:"uppercase",
                       letterSpacing:"0.07em" }}>Priority</div>
                     <div style={{ color:"#6366f1", fontWeight:700, fontSize:"0.82rem" }}>
-                      {ch.priority===1 ? "High" : ch.priority===2 ? "Medium" : "Low"}
+                      {i===0 ? "High" : i===1 ? "Medium" : "Low"}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ color:"#374151", fontSize:"0.72rem", lineHeight:1.5 }}>
-                  {ch.priority===1
-                    ? "Focus 60% of marketing budget here for maximum early traction."
-                    : ch.priority===2
-                    ? "Secondary driver for organic growth and brand awareness."
-                    : "Supplementary channel for targeted outbound prospecting."}
+                  {i===0
+                    ? "Primary channel — focus majority of early marketing budget here."
+                    : i===1
+                    ? "Secondary channel — build organic presence and brand awareness."
+                    : "Tertiary channel — targeted outreach for supplementary growth."}
                 </div>
               </div>
             ))}

@@ -130,6 +130,11 @@ MARKET_SCHEMA = """{
   "som": {"value": 2.0,  "reasoning": "One concise sentence, max 120 characters."},
   "current_market_size": 30.0, "five_year_projection": 70.0,
   "ten_year_projection": 150.0, "cagr": 18.5,
+  "market_trends": [
+    {"icon": "📈", "title": "Growth Driver", "insight": "One professional sentence about main growth trend, max 130 chars."},
+    {"icon": "🔄", "title": "Market Shift",  "insight": "One professional sentence about a key market shift, max 130 chars."},
+    {"icon": "⚡", "title": "Key Tailwind",  "insight": "One professional sentence about a macro tailwind, max 130 chars."}
+  ],
   "segments": [{"name":"string","size":"string","pain_points":["p1","p2"]}],
   "risks": [{"risk":"string","type":"regulatory"}]
 }"""
@@ -170,7 +175,11 @@ GTM_SCHEMA = """{
     {"tier":"Premium","price":"$25/user/mo","inclusions":["f1","f2","f3"]},
     {"tier":"Enterprise","price":"Custom","inclusions":["f1","f2","f3","f4"]}
   ],
-  "channels":[{"name":"Content Marketing","priority":1,"cac":"$50-100"}],
+  "channels":[
+    {"name":"Channel 1","priority":1,"cac":"$X-Y"},
+    {"name":"Channel 2","priority":2,"cac":"$X-Y"},
+    {"name":"Channel 3","priority":3,"cac":"$X-Y"}
+  ],
   "phases":[
     {"phase":1,"title":"Foundation","months":"Month 1-2","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
     {"phase":2,"title":"Validation","months":"Month 3-4","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
@@ -182,7 +191,8 @@ GTM_SCHEMA = """{
            "cac":500,"ltv":5000,"churn_target":5,"revenue_12month":600000},
   "budget":[{"category":"Marketing","percentage":40},{"category":"Sales","percentage":30},
             {"category":"Product","percentage":20},{"category":"Ops","percentage":10}]
-}"""
+}
+IMPORTANT: The channels array MUST contain EXACTLY 3 items, no more, no less."""
 
 
 # ══════════════════════════════════════════════════════════════════════════════
