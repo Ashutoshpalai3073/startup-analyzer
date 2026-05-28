@@ -125,6 +125,18 @@ def _extract_json(text: str) -> dict:
 def _ensure_market(d: dict) -> dict:
     if not d:
         return {}
+    segments = d.get("segments", [])
+    # Hard enforce exactly 3 segments
+    segments = segments[:3]
+    while len(segments) < 3:
+        segments.append({"name": f"Segment {len(segments)+1}", "size": "TBD", "pain_points": []})
+
+    risks = d.get("risks", [])
+    # Hard enforce exactly 3 risks
+    risks = risks[:3]
+    while len(risks) < 3:
+        risks.append({"risk": "General market risk", "type": "market"})
+
     return {
         "overview":             d.get("overview", ""),
         "problem_solved":       d.get("problem_solved", ""),
@@ -137,8 +149,8 @@ def _ensure_market(d: dict) -> dict:
         "ten_year_projection":  d.get("ten_year_projection", 0),
         "cagr":                 d.get("cagr", 0),
         "market_trends":        d.get("market_trends", []),
-        "segments":             d.get("segments", []),
-        "risks":                d.get("risks", []),
+        "segments":             segments,
+        "risks":                risks,
     }
 
 def _ensure_competitors(d: dict) -> dict:
@@ -265,12 +277,22 @@ MARKET_SCHEMA = """{
     {"num": "2", "title": "Market Shift",  "insight": "Specific % or $ stat for THIS market. Max 80 chars."},
     {"num": "3", "title": "Key Tailwind",  "insight": "Specific % or $ stat for THIS market. Max 80 chars."}
   ],
-  "segments": [{"name":"string","size":"string","pain_points":["p1","p2"]}],
-  "risks": [{"risk":"string","type":"regulatory|competitive|market|technology|operational"}]
+  "segments": [
+    {"name":"Segment 1 name","size":"$XB","pain_points":["p1","p2"]},
+    {"name":"Segment 2 name","size":"$XB","pain_points":["p1","p2"]},
+    {"name":"Segment 3 name","size":"$XB","pain_points":["p1","p2"]}
+  ],
+   "risks": [
+    {"risk":"string","type":"regulatory|competitive|market|technology|operational"},
+    {"risk":"string","type":"regulatory|competitive|market|technology|operational"},
+    {"risk":"string","type":"regulatory|competitive|market|technology|operational"}
+  ]
 }
 CRITICAL RULES:
 - ALL numeric values (tam, sam, som, cagr, projections) MUST be researched estimates specific to THIS startup idea. Never use placeholder numbers.
 - landscape_type and competition_level MUST reflect actual market reality, not generic defaults.
+- The segments array MUST contain EXACTLY 3 items — no more, no less.
+- The risks array MUST contain EXACTLY 3 items — no more, no less.
 - reasoning fields MUST be under 40 characters to fit mobile UI."""
 
 COMPETITOR_SCHEMA = """{
