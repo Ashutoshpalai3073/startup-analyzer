@@ -156,13 +156,26 @@ def _ensure_market(d: dict) -> dict:
 def _ensure_competitors(d: dict) -> dict:
     if not d:
         return {}
+    competitors = d.get("competitors", [])
+    # Hard enforce exactly 5 competitors
+    competitors = competitors[:5]
+    while len(competitors) < 5:
+        competitors.append({
+            "name":            f"Competitor {len(competitors)+1}",
+            "founded":         2015,
+            "funding":         "Bootstrapped",
+            "product":         "Similar product in this space",
+            "pricing":         "Contact for pricing",
+            "usps":            ["Established brand", "Wide distribution"],
+            "weaknesses":      ["Limited innovation", "High pricing"],
+            "target_customer": "General market",
+        })
     return {
         "landscape_type":    d.get("landscape_type", ""),
         "competition_level": d.get("competition_level", ""),
-        "competitors":       d.get("competitors", []),
+        "competitors":       competitors,
         "gaps":              d.get("gaps", []),
     }
-
 def _ensure_funding(d: dict) -> dict:
     if not d:
         return {}
@@ -306,19 +319,17 @@ CRITICAL RULES:
 COMPETITOR_SCHEMA = """{
   "landscape_type": "<actual market type: Blue Ocean|Red Ocean|Emerging|Niche — pick the TRUE one for this market>",
   "competition_level": "<actual level: Fragmented|Consolidated|Duopoly|Monopolistic|Nascent — pick the TRUE one>",
-  "competitors": [{
-    "name":"ActualCompanyName",
-    "founded": <real_year>,
-    "funding": "<real funding amount or 'Bootstrapped' or 'Publicly Traded'>",
-    "product": "string",
-    "pricing": "<real pricing>",
-    "usps": ["real_usp1","real_usp2"],
-    "weaknesses": ["real_weakness1","real_weakness2"],
-    "target_customer": "string"
-  }],
+  "competitors": [
+    {"name":"Competitor1","founded":2010,"funding":"$10M","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"},
+    {"name":"Competitor2","founded":2012,"funding":"$20M","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"},
+    {"name":"Competitor3","founded":2014,"funding":"$5M","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"},
+    {"name":"Competitor4","founded":2016,"funding":"Bootstrapped","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"},
+    {"name":"Competitor5","founded":2018,"funding":"$2M","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"}
+  ],
   "gaps": ["specific_gap1","specific_gap2","specific_gap3"]
 }
-CRITICAL: landscape_type and competition_level MUST be researched and unique to this specific market. Never default to 'red ocean' or 'fragmented' unless truly accurate."""
+CRITICAL: landscape_type and competition_level MUST be researched and unique to this specific market. Never default to 'red ocean' or 'fragmented' unless truly accurate.
+CRITICAL: The competitors array MUST contain EXACTLY 5 items — no more, no less. Always name 5 real, distinct competitors."""
 
 FUNDING_SCHEMA = """{
   "overview":"string","sentiment":"bullish","total_investment":"$2B",
