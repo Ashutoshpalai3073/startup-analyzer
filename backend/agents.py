@@ -194,16 +194,24 @@ def _ensure_gtm(d: dict) -> dict:
     channels = d.get("channels", [])
     # Hard enforce exactly 3 channels at the data layer
     channels = sorted(channels, key=lambda c: c.get("priority", 99))[:3]
+
+    kpis = d.get("kpis", {})
+    # Hard-truncate north_star to 5 words so it never breaks the mobile KPI card
+    if kpis.get("north_star"):
+        words = kpis["north_star"].split()
+        if len(words) > 5:
+            kpis["north_star"] = " ".join(words[:5])
+
     return {
         "icp":               d.get("icp", {}),
         "value_proposition": d.get("value_proposition", ""),
         "pricing":           d.get("pricing", []),
         "channels":          channels,
         "phases":            d.get("phases", []),
-        "kpis":              d.get("kpis", {}),
+        "kpis":              kpis,
         "budget":            d.get("budget", []),
     }
-
+  
 
 # ══════════════════════════════════════════════════════════════════════════════
 # JSON RETRY WRAPPER
@@ -350,7 +358,7 @@ GTM_SCHEMA = """{
     {"phase":4,"title":"Scale","months":"Month 7-9","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
     {"phase":5,"title":"Leadership","months":"Month 10-12","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]}
   ],
-  "kpis":{"north_star":"string","mrr_6month":10000,"mrr_12month":50000,
+  "kpis":{"north_star":"Max 5 words. E.g. 'Monthly active paying users'","mrr_6month":10000,"mrr_12month":50000,
            "cac":500,"ltv":5000,"churn_target":5,"revenue_12month":600000},
   "budget":[{"category":"Marketing","percentage":40},{"category":"Sales","percentage":30},
             {"category":"Product","percentage":20},{"category":"Ops","percentage":10}]
