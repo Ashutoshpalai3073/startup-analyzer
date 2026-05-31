@@ -13,7 +13,9 @@ export default function SwotSection({ data={} }) {
   const width    = useWindowWidth();
   const isMobile = width < 640;
 
-  if (!data || !Object.keys(data).length) return <Empty />;
+  // Show empty state only when ALL four quadrants have zero items
+  const hasData = Q.some(q => (data[q.key] || []).length > 0);
+  if (!data || !hasData) return <Empty />;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
@@ -261,5 +263,15 @@ function hexRgb(hex) {
 }
 
 function Empty() {
-  return <div style={{ color:"#374151", textAlign:"center", padding:"4rem" }}>No SWOT data available.</div>;
+  return (
+    <div style={{ textAlign:"center", padding:"4rem 2rem" }}>
+      <div style={{ fontSize:"2rem", marginBottom:"1rem" }}>⬡</div>
+      <div style={{ color:"#4b5563", fontWeight:600, fontSize:"0.95rem", marginBottom:"0.4rem" }}>
+        SWOT analysis could not be generated
+      </div>
+      <div style={{ color:"#374151", fontSize:"0.82rem" }}>
+        The AI agent hit a rate limit during this section. Run a new analysis to retry.
+      </div>
+    </div>
+  );
 }

@@ -10,7 +10,7 @@ const STEPS = [
   { icon:"→", label:"GTM Strategist",             desc:"Crafting 5-phase go-to-market roadmap...",          color:"#f59e0b" },
 ];
 
-export default function LoadingScreen({ idea, onComplete }) {
+export default function LoadingScreen({ idea, onComplete, onCancel }) {
   const width    = useWindowWidth();
   const isMobile = width < 640;
 
@@ -197,6 +197,27 @@ export default function LoadingScreen({ idea, onComplete }) {
       <p style={{ color:"#1e293b", fontSize:"0.78rem", marginTop:"1.5rem", textAlign:"center" }}>
         Analysis takes 5–10 minutes · Please keep this tab open
       </p>
+
+      {onCancel && (
+        <button
+          onClick={onCancel}
+          style={{
+            marginTop:"1.25rem",
+            background:"none",
+            border:"1px solid rgba(255,255,255,0.07)",
+            borderRadius:8,
+            padding:"0.5rem 1.25rem",
+            color:"#374151",
+            fontSize:"0.8rem",
+            cursor:"pointer",
+            transition:"all 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(239,68,68,0.3)"; e.currentTarget.style.color="#ef4444"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(255,255,255,0.07)"; e.currentTarget.style.color="#374151"; }}
+        >
+          ← Cancel analysis
+        </button>
+      )}
     </div>
   );
 }

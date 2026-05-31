@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowWidth } from "../useWindowWidth";
+import { useAuth } from "../context/AuthContext";
 
 const EXAMPLES = [
   "SaaS tool for remote team productivity using sentiment analysis",
@@ -92,19 +93,44 @@ function Cube3D({ size=60, color="#6366f1", delay=0 }) {
   );
 }
 
-export default function LandingPage({ onAnalyze, error }) {
+export default function LandingPage({ onAnalyze, error, onOpenAuth }) {
   const width       = useWindowWidth();
   const isMobile    = width < 640;
   const isTablet    = width < 1024;
+  const { user, logout, deleteAccount } = useAuth();
 
   const [idea, setIdea]       = useState("");
   const [focused, setFocused] = useState(false);
   const [exIdx, setExIdx]     = useState(0);
+  const [showUserMenu, setShowUserMenu]           = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    if (showUserMenu) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showUserMenu]);
 
   useEffect(() => {
     const t = setInterval(() => setExIdx(i => (i+1) % EXAMPLES.length), 3500);
     return () => clearInterval(t);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    setShowUserMenu(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    await deleteAccount();
+    setShowDeleteConfirm(false);
+    setShowUserMenu(false);
+  };
 
   return (
     <div style={{ minHeight:"100vh", background:"#050510", overflow:"hidden", position:"relative" }}>
@@ -155,7 +181,118 @@ export default function LandingPage({ onAnalyze, error }) {
             Drusti
           </span>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
+          {/* ── Authenticated: avatar + name dropdown ── */}
+          {user ? (
+            <div ref={userMenuRef} style={{ position:"relative" }}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  background:"rgba(99,102,241,0.1)",
+                  border:"1px solid rgba(99,102,241,0.2)",
+                  borderRadius:100,
+                  padding:"0.45rem 0.9rem 0.45rem 0.45rem",
+                  color:"#f1f5f9",
+                  cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:"0.5rem",
+                  fontSize:"0.85rem", fontWeight:600,
+                }}
+              >
+                <div style={{
+                  width:28, height:28, borderRadius:"50%",
+                  background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  color:"#fff", fontSize:"0.85rem", fontWeight:700, flexShrink:0,
+                }}>
+                  {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
+                </div>
+                {!isMobile && (
+                  <span style={{ maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {user.name || user.email.split("@")[0]}
+                  </span>
+                )}
+                <span style={{ color:"#4b5563", fontSize:"0.7rem" }}>▾</span>
+              </button>
+              {showUserMenu && (
+                <motion.div
+                  initial={{ opacity:0, y:-8, scale:0.96 }}
+                  animate={{ opacity:1, y:0,  scale:1    }}
+                  style={{
+                    position:"absolute", top:"calc(100% + 0.5rem)", right:0,
+                    background:"rgba(10,10,30,0.97)",
+                    border:"1px solid rgba(99,102,241,0.2)",
+                    borderRadius:12, backdropFilter:"blur(20px)",
+                    boxShadow:"0 20px 60px rgba(0,0,0,0.5)",
+                    minWidth:210, zIndex:200,
+                  }}
+                >
+                  <div style={{
+                    padding:"0.85rem 1rem",
+                    borderBottom:"1px solid rgba(99,102,241,0.1)",
+                  }}>
+                    <div style={{ color:"#f1f5f9", fontWeight:600, fontSize:"0.88rem", marginBottom:"0.2rem" }}>
+                      {user.name}
+                    </div>
+                    <div style={{ color:"#4b5563", fontSize:"0.75rem" }}>{user.email}</div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    style={{ width:"100%", padding:"0.75rem 1rem", border:"none", background:"none", color:"#f1f5f9", fontSize:"0.85rem", fontWeight:600, cursor:"pointer", textAlign:"left" }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"}
+                    onMouseLeave={e => e.currentTarget.style.background="none"}
+                  >
+                    Log Out
+                  </button>
+                  <div style={{ height:1, background:"rgba(99,102,241,0.1)", margin:"0 1rem" }} />
+                  <button
+                    onClick={() => { setShowDeleteConfirm(true); setShowUserMenu(false); }}
+                    style={{ width:"100%", padding:"0.75rem 1rem", border:"none", background:"none", color:"#ef4444", fontSize:"0.85rem", fontWeight:600, cursor:"pointer", textAlign:"left" }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.08)"}
+                    onMouseLeave={e => e.currentTarget.style.background="none"}
+                  >
+                    Delete Account
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          ) : (
+            /* ── Not authenticated: Sign In + Sign Up buttons ── */
+            <>
+              <button
+                onClick={() => onOpenAuth("login")}
+                style={{
+                  background:"none",
+                  border:"1px solid rgba(99,102,241,0.25)",
+                  borderRadius:8,
+                  padding: isMobile ? "0.4rem 0.75rem" : "0.45rem 1rem",
+                  color:"#94a3b8", fontWeight:600,
+                  fontSize: isMobile ? "0.78rem" : "0.85rem",
+                  cursor:"pointer", transition:"all 0.2s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(99,102,241,0.6)"; e.currentTarget.style.color="#f1f5f9"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(99,102,241,0.25)"; e.currentTarget.style.color="#94a3b8"; }}
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => onOpenAuth("signup")}
+                style={{
+                  background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  border:"none", borderRadius:8,
+                  padding: isMobile ? "0.4rem 0.75rem" : "0.45rem 1.1rem",
+                  color:"#fff", fontWeight:700,
+                  fontSize: isMobile ? "0.78rem" : "0.85rem",
+                  cursor:"pointer",
+                  boxShadow:"0 4px 15px rgba(99,102,241,0.35)",
+                  transition:"all 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow="0 6px 25px rgba(99,102,241,0.55)"}
+                onMouseLeave={e => e.currentTarget.style.boxShadow="0 4px 15px rgba(99,102,241,0.35)"}
+              >
+                Sign Up
+              </button>
+            </>
+          )}
           <div style={{
             background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)",
             borderRadius:100, padding: isMobile ? "0.3rem 0.6rem" : "0.3rem 0.9rem",
@@ -424,6 +561,36 @@ export default function LandingPage({ onAnalyze, error }) {
           </div>
         ))}
       </motion.div>
+
+      {/* ── Delete Account Confirmation ─────────────────────────────────── */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300, padding:"1rem" }}
+          >
+            <motion.div
+              initial={{ scale:0.88, opacity:0, y:20 }} animate={{ scale:1, opacity:1, y:0 }} exit={{ scale:0.88, opacity:0 }}
+              transition={{ type:"spring", damping:22, stiffness:300 }}
+              style={{ background:"rgba(8,8,28,0.99)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:20, padding: isMobile ? "1.75rem 1.25rem" : "2.25rem", width:"100%", maxWidth:420, boxShadow:"0 40px 100px rgba(0,0,0,0.7)" }}
+            >
+              <div style={{ width:48, height:48, borderRadius:12, background:"rgba(239,68,68,0.12)", border:"1px solid rgba(239,68,68,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"1.4rem", margin:"0 auto 1.25rem" }}>⚠</div>
+              <h3 style={{ color:"#f1f5f9", fontSize:"1.1rem", fontWeight:700, textAlign:"center", margin:"0 0 0.75rem" }}>Delete Account?</h3>
+              <p style={{ color:"#64748b", fontSize:"0.85rem", textAlign:"center", lineHeight:1.6, margin:"0 0 1.75rem" }}>
+                Are you sure? This will permanently delete your account and all your data. This cannot be undone.
+              </p>
+              <div style={{ display:"flex", gap:"0.75rem" }}>
+                <button onClick={handleDeleteAccount} style={{ flex:1, background:"linear-gradient(135deg,#ef4444,#dc2626)", border:"none", borderRadius:10, padding:"0.85rem", color:"#fff", fontWeight:700, fontSize:"0.92rem", cursor:"pointer", boxShadow:"0 4px 20px rgba(239,68,68,0.3)" }}>
+                  Yes, Delete
+                </button>
+                <button onClick={() => setShowDeleteConfirm(false)} style={{ flex:1, background:"transparent", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, color:"#4b5563", padding:"0.85rem", cursor:"pointer", fontSize:"0.92rem" }}>
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

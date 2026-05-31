@@ -4,9 +4,16 @@ import time
 import re
 import random
 import threading
+import tempfile
 import litellm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from crewai import Agent, Task, Crew, Process, LLM
+
+try:
+    from duckduckgo_search import DDGS
+    _ddgs_available = True
+except ImportError:
+    _ddgs_available = False
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -36,6 +43,54 @@ class TokenBucket:
                 self.tokens = self.capacity - estimated_tokens
 
 _bucket = TokenBucket(tokens_per_minute=10000)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WEB SEARCH CONTEXT
+# ══════════════════════════════════════════════════════════════════════════════
+def search_web_context(startup_idea: str) -> dict:
+    if not _ddgs_available:
+        print("  [search] duckduckgo_search not installed — skipping web context")
+        return {"market": [], "competitors": [], "funding": []}
+
+    queries = {
+        "market":      f"{startup_idea} total addressable market size 2024 2025 billion",
+        "competitors": f"top companies startups {startup_idea} competitors",
+        "funding":     f"{startup_idea} startup VC funding investment rounds 2024",
+    }
+    results = {}
+    try:
+        with DDGS() as ddgs:
+            for key, query in queries.items():
+                try:
+                    hits = list(ddgs.text(query, max_results=3))
+                    results[key] = [
+                        {
+                            "title":   h.get("title", ""),
+                            "snippet": h.get("body", "")[:300],
+                            "url":     h.get("href", ""),
+                        }
+                        for h in hits
+                    ]
+                    print(f"  [search] '{key}' — {len(results[key])} results")
+                except Exception as e:
+                    print(f"  [search] '{key}' failed: {e}")
+                    results[key] = []
+    except Exception as e:
+        print(f"  [search] DDGS init failed: {e}")
+        return {"market": [], "competitors": [], "funding": []}
+    return results
+
+
+def _fmt_ctx(sources: list, label: str) -> str:
+    if not sources:
+        return ""
+    lines = [f"\n[Web Research — {label}]:"]
+    for i, s in enumerate(sources[:3], 1):
+        lines.append(f"  {i}. {s['title']}")
+        if s["snippet"]:
+            lines.append(f"     {s['snippet'][:200]}")
+    return "\n".join(lines)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -75,24 +130,21 @@ litellm.completion = _patched_completion
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# JSON EXTRACTOR — 4-stage parsing, handles all common LLM output formats
+# JSON EXTRACTOR — 4-stage parsing
 # ══════════════════════════════════════════════════════════════════════════════
 def _extract_json(text: str) -> dict:
     if not text:
         return {}
     text = text.strip()
-    # Stage 1 — direct parse
     try:
         return json.loads(text)
     except Exception:
         pass
-    # Stage 2 — strip markdown fences
     text_clean = re.sub(r'```(?:json)?', '', text).replace('```', '').strip()
     try:
         return json.loads(text_clean)
     except Exception:
         pass
-    # Stage 3 — bracket matching for outermost {}
     start = text_clean.find('{')
     if start != -1:
         depth = 0
@@ -106,7 +158,6 @@ def _extract_json(text: str) -> dict:
                         return json.loads(text_clean[start:i+1])
                     except Exception:
                         break
-    # Stage 4 — fix trailing commas (common LLM mistake)
     try:
         fixed = re.sub(r',\s*([}\]])', r'\1', text_clean)
         start = fixed.find('{')
@@ -119,24 +170,17 @@ def _extract_json(text: str) -> dict:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STRUCTURE VALIDATORS
-# Guarantees every section always has all expected keys filled in,
-# so the frontend never receives a bare {} that triggers <Empty />.
+# FIX: removed `if not d: return {}` from ALL validators — every function now
+# always returns a fully-keyed structure so the frontend never gets a bare {}
 # ══════════════════════════════════════════════════════════════════════════════
 def _ensure_market(d: dict) -> dict:
-    if not d:
-        return {}
-    segments = d.get("segments", [])
-    # Hard enforce exactly 3 segments
-    segments = segments[:3]
+    d = d or {}
+    segments = d.get("segments", [])[:3]
     while len(segments) < 3:
         segments.append({"name": f"Segment {len(segments)+1}", "size": "TBD", "pain_points": []})
-
-    risks = d.get("risks", [])
-    # Hard enforce exactly 3 risks
-    risks = risks[:3]
+    risks = d.get("risks", [])[:3]
     while len(risks) < 3:
         risks.append({"risk": "General market risk", "type": "market"})
-
     return {
         "overview":             d.get("overview", ""),
         "problem_solved":       d.get("problem_solved", ""),
@@ -154,11 +198,8 @@ def _ensure_market(d: dict) -> dict:
     }
 
 def _ensure_competitors(d: dict) -> dict:
-    if not d:
-        return {}
-    competitors = d.get("competitors", [])
-    # Hard enforce exactly 5 competitors
-    competitors = competitors[:5]
+    d = d or {}
+    competitors = d.get("competitors", [])[:5]
     while len(competitors) < 5:
         competitors.append({
             "name":            f"Competitor {len(competitors)+1}",
@@ -176,9 +217,9 @@ def _ensure_competitors(d: dict) -> dict:
         "competitors":       competitors,
         "gaps":              d.get("gaps", []),
     }
+
 def _ensure_funding(d: dict) -> dict:
-    if not d:
-        return {}
+    d = d or {}
     return {
         "overview":         d.get("overview", ""),
         "sentiment":        d.get("sentiment", ""),
@@ -190,8 +231,7 @@ def _ensure_funding(d: dict) -> dict:
     }
 
 def _ensure_swot(d: dict) -> dict:
-    if not d:
-        return {}
+    d = d or {}
     return {
         "strengths":     d.get("strengths", []),
         "weaknesses":    d.get("weaknesses", []),
@@ -202,19 +242,13 @@ def _ensure_swot(d: dict) -> dict:
     }
 
 def _ensure_gtm(d: dict) -> dict:
-    if not d:
-        return {}
-    channels = d.get("channels", [])
-    # Hard enforce exactly 3 channels at the data layer
-    channels = sorted(channels, key=lambda c: c.get("priority", 99))[:3]
-
+    d = d or {}
+    channels = sorted(d.get("channels", []), key=lambda c: c.get("priority", 99))[:3]
     kpis = d.get("kpis", {})
-    # Hard-truncate north_star to 5 words so it never breaks the mobile KPI card
     if kpis.get("north_star"):
         words = kpis["north_star"].split()
         if len(words) > 5:
             kpis["north_star"] = " ".join(words[:5])
-
     return {
         "icp":               d.get("icp", {}),
         "value_proposition": d.get("value_proposition", ""),
@@ -224,18 +258,18 @@ def _ensure_gtm(d: dict) -> dict:
         "kpis":              kpis,
         "budget":            d.get("budget", []),
     }
-  
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # JSON RETRY WRAPPER
-# If the LLM returns empty/unparseable JSON, retries up to 2 more times
-# using a direct litellm call with a stricter JSON-only system prompt.
+# FIX: direct retry uses llama-3.1-8b-instant (not 70b) to save token quota
 # ══════════════════════════════════════════════════════════════════════════════
 def _run_with_json_retry(run_fn, label: str, schema: str, idea: str, max_parse_retries=2):
     for attempt in range(max_parse_retries + 1):
         raw = ""
         try:
             raw = run_fn()
+            print(f"  [{label}] raw output (first 300 chars): {repr(raw[:300])}")
         except Exception as e:
             print(f"  {label} LLM call failed (attempt {attempt+1}): {e}")
             if attempt < max_parse_retries:
@@ -253,7 +287,7 @@ def _run_with_json_retry(run_fn, label: str, schema: str, idea: str, max_parse_r
             time.sleep(8)
             try:
                 resp = litellm.completion(
-                    model="groq/llama-3.3-70b-versatile",
+                    model="groq/llama-3.1-8b-instant",
                     messages=[
                         {"role": "system", "content":
                             "You are a JSON-only API. "
@@ -286,39 +320,34 @@ MARKET_SCHEMA = """{
   "overview": "string",
   "problem_solved": "string",
   "key_drivers": ["driver1","driver2","driver3"],
-  "tam": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars. E.g. 'Entire global fragrance industry'"},
-  "sam": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars. E.g. 'Online luxury segment in Asia-Pacific'"},
-  "som": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars. E.g. 'D2C channel, metro India, year 1-3'"},
+  "tam": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars"},
+  "sam": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars"},
+  "som": {"value": <REAL_ESTIMATED_FLOAT_IN_BILLIONS>, "reasoning": "Max 40 chars"},
   "current_market_size": <REAL_FLOAT>,
   "five_year_projection": <REAL_FLOAT>,
   "ten_year_projection": <REAL_FLOAT>,
   "cagr": <REAL_FLOAT>,
   "market_trends": [
-    {"num": "1", "title": "Growth Driver", "insight": "Specific % or $ stat for THIS market. Max 80 chars."},
-    {"num": "2", "title": "Market Shift",  "insight": "Specific % or $ stat for THIS market. Max 80 chars."},
-    {"num": "3", "title": "Key Tailwind",  "insight": "Specific % or $ stat for THIS market. Max 80 chars."}
+    {"num": "1", "title": "Growth Driver", "insight": "Max 80 chars"},
+    {"num": "2", "title": "Market Shift",  "insight": "Max 80 chars"},
+    {"num": "3", "title": "Key Tailwind",  "insight": "Max 80 chars"}
   ],
   "segments": [
     {"name":"Segment 1 name","size":"$XB","pain_points":["p1","p2"]},
     {"name":"Segment 2 name","size":"$XB","pain_points":["p1","p2"]},
     {"name":"Segment 3 name","size":"$XB","pain_points":["p1","p2"]}
   ],
-   "risks": [
+  "risks": [
     {"risk":"string","type":"regulatory|competitive|market|technology|operational"},
     {"risk":"string","type":"regulatory|competitive|market|technology|operational"},
     {"risk":"string","type":"regulatory|competitive|market|technology|operational"}
   ]
 }
-CRITICAL RULES:
-- ALL numeric values (tam, sam, som, cagr, projections) MUST be researched estimates specific to THIS startup idea. Never use placeholder numbers.
-- landscape_type and competition_level MUST reflect actual market reality, not generic defaults.
-- The segments array MUST contain EXACTLY 3 items — no more, no less.
-- The risks array MUST contain EXACTLY 3 items — no more, no less.
-- reasoning fields MUST be under 40 characters to fit mobile UI."""
+CRITICAL: segments MUST have EXACTLY 3 items. risks MUST have EXACTLY 3 items. reasoning fields under 40 chars."""
 
 COMPETITOR_SCHEMA = """{
-  "landscape_type": "<actual market type: Blue Ocean|Red Ocean|Emerging|Niche — pick the TRUE one for this market>",
-  "competition_level": "<actual level: Fragmented|Consolidated|Duopoly|Monopolistic|Nascent — pick the TRUE one>",
+  "landscape_type": "Blue Ocean|Red Ocean|Emerging|Niche",
+  "competition_level": "Fragmented|Consolidated|Duopoly|Monopolistic|Nascent",
   "competitors": [
     {"name":"Competitor1","founded":2010,"funding":"$10M","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"},
     {"name":"Competitor2","founded":2012,"funding":"$20M","product":"string","pricing":"$X/mo","usps":["usp1","usp2"],"weaknesses":["w1","w2"],"target_customer":"string"},
@@ -328,8 +357,7 @@ COMPETITOR_SCHEMA = """{
   ],
   "gaps": ["specific_gap1","specific_gap2","specific_gap3"]
 }
-CRITICAL: landscape_type and competition_level MUST be researched and unique to this specific market. Never default to 'red ocean' or 'fragmented' unless truly accurate.
-CRITICAL: The competitors array MUST contain EXACTLY 5 items — no more, no less. Always name 5 real, distinct competitors."""
+CRITICAL: competitors MUST have EXACTLY 5 items."""
 
 FUNDING_SCHEMA = """{
   "overview":"string","sentiment":"bullish","total_investment":"$2B",
@@ -369,16 +397,20 @@ GTM_SCHEMA = """{
     {"phase":4,"title":"Scale","months":"Month 7-9","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]},
     {"phase":5,"title":"Leadership","months":"Month 10-12","goals":["g1","g2"],"activities":["a1","a2"],"metrics":["m1","m2"]}
   ],
-  "kpis":{"north_star":"Max 5 words. E.g. 'Monthly active paying users'","mrr_6month":10000,"mrr_12month":50000,
+  "kpis":{"north_star":"Max 5 words","mrr_6month":10000,"mrr_12month":50000,
            "cac":500,"ltv":5000,"churn_target":5,"revenue_12month":600000},
   "budget":[{"category":"Marketing","percentage":40},{"category":"Sales","percentage":30},
             {"category":"Product","percentage":20},{"category":"Ops","percentage":10}]
 }
-IMPORTANT: The channels array MUST contain EXACTLY 3 items, no more, no less."""
+IMPORTANT: channels MUST have EXACTLY 3 items."""
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # INDIVIDUAL TASK RUNNERS
+# FIX: _run_swot now uses direct litellm.completion instead of CrewAI
+# CrewAI uses CREWAI_STORAGE_DIR="/tmp" which does not exist on Windows,
+# causing kickoff() to fail silently and return "". GTM already used direct
+# litellm and worked — SWOT now uses the same pattern.
 # ══════════════════════════════════════════════════════════════════════════════
 def _run_single(role, goal, backstory, description, llm) -> str:
     agent = Agent(role=role, goal=goal, backstory=backstory, llm=llm)
@@ -387,7 +419,8 @@ def _run_single(role, goal, backstory, description, llm) -> str:
     return task.output.raw or ""
 
 
-def _run_market(idea, llm):
+def _run_market(idea, llm, web_ctx=None):
+    ctx_str = _fmt_ctx(web_ctx, "Market Size & Trends") if web_ctx else ""
     def _call():
         return _run_single(
             role      = "Market Research Analyst",
@@ -400,9 +433,9 @@ def _run_market(idea, llm):
             ),
             description = (
                 f"Research and analyze the market for this specific startup: {idea}\n"
-                f"IMPORTANT: Generate UNIQUE numeric estimates (TAM, SAM, SOM, CAGR, projections) "
-                f"based on real market research for THIS specific industry and idea. "
-                f"Do NOT use placeholder or example values from the schema.\n"
+                f"{ctx_str}\n"
+                f"IMPORTANT: Use the web research above to ground your numeric estimates. "
+                f"Generate UNIQUE values (TAM, SAM, SOM, CAGR, projections) specific to THIS idea.\n"
                 f"Return ONLY valid JSON:\n{MARKET_SCHEMA}"
             ),
             llm = llm,
@@ -410,7 +443,8 @@ def _run_market(idea, llm):
     return _run_with_json_retry(_call, "market", MARKET_SCHEMA, idea)
 
 
-def _run_competitor(idea, llm):
+def _run_competitor(idea, llm, web_ctx=None):
+    ctx_str = _fmt_ctx(web_ctx, "Real Competitors") if web_ctx else ""
     def _call():
         return _run_single(
             role      = "Competitive Intelligence Analyst",
@@ -424,9 +458,9 @@ def _run_competitor(idea, llm):
             ),
             description = (
                 f"Research and analyze the competitive landscape for this specific startup: {idea}\n"
-                f"IMPORTANT: landscape_type and competition_level MUST reflect actual market reality "
-                f"for THIS specific industry — do not default to generic values. "
-                f"Name REAL competitors with accurate details.\n"
+                f"{ctx_str}\n"
+                f"IMPORTANT: Use the web research above to name REAL companies. "
+                f"landscape_type and competition_level MUST reflect actual market reality.\n"
                 f"Return ONLY valid JSON:\n{COMPETITOR_SCHEMA}"
             ),
             llm = llm,
@@ -434,28 +468,48 @@ def _run_competitor(idea, llm):
     return _run_with_json_retry(_call, "competitors", COMPETITOR_SCHEMA, idea)
 
 
-def _run_funding(idea, llm):
+def _run_funding(idea, llm_fast, web_ctx=None):
+    ctx_str = _fmt_ctx(web_ctx, "Funding Activity") if web_ctx else ""
     def _call():
         return _run_single(
             role        = "Startup Funding Analyst",
             goal        = f"Produce JSON funding landscape for: {idea}",
             backstory   = "VC analyst tracking funding rounds. Always responds in pure JSON.",
-            description = f"Analyze funding landscape for: {idea}\nReturn ONLY valid JSON:\n{FUNDING_SCHEMA}",
-            llm         = llm,
+            description = (
+                f"Analyze funding landscape for: {idea}\n"
+                f"{ctx_str}\n"
+                f"Use the web research above to cite REAL funding activity in this space.\n"
+                f"Return ONLY valid JSON:\n{FUNDING_SCHEMA}"
+            ),
+            llm         = llm_fast,
         )
     return _run_with_json_retry(_call, "funding", FUNDING_SCHEMA, idea)
 
 
-def _run_swot(idea, llm, market_raw, comp_raw):
+# FIX: replaced CrewAI _run_single with direct litellm.completion
+# CrewAI's storage backend fails silently on Windows (no /tmp directory),
+# returning "" every time. Direct litellm call bypasses this entirely.
+def _run_swot(idea, llm_fast, market_raw, comp_raw):
     ctx = f"Market: {market_raw[:600]}\nCompetitors: {comp_raw[:600]}"
+    prompt = (
+        f"Build a SWOT analysis for this startup: {idea}\n\n"
+        f"Context:\n{ctx}\n\n"
+        f"Return ONLY valid JSON, no markdown, no explanation:\n{SWOT_SCHEMA}"
+    )
     def _call():
-        return _run_single(
-            role        = "Strategic SWOT Analyst",
-            goal        = f"Produce JSON SWOT analysis for: {idea}",
-            backstory   = "Strategy consultant. Always responds in pure JSON.",
-            description = f"Build SWOT for: {idea}\nContext:\n{ctx}\nReturn ONLY valid JSON:\n{SWOT_SCHEMA}",
-            llm         = llm,
+        response = litellm.completion(
+            model="groq/llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content":
+                    "You are a strategic SWOT analyst. "
+                    "Always respond with pure valid JSON only. "
+                    "No explanation, no markdown, no extra text."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=2000,
+            temperature=0.3,
         )
+        return response.choices[0].message.content or ""
     return _run_with_json_retry(_call, "swot", SWOT_SCHEMA, idea)
 
 
@@ -480,9 +534,11 @@ def _run_gtm(idea, llm_fast, swot_raw, fund_raw):
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN RUNNER
+# FIX: CREWAI_STORAGE_DIR now uses tempfile.gettempdir() instead of "/tmp"
+# which is a Linux-only path and does not exist on Windows
 # ══════════════════════════════════════════════════════════════════════════════
 def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
-    os.environ["CREWAI_STORAGE_DIR"] = "/tmp"
+    os.environ["CREWAI_STORAGE_DIR"] = tempfile.gettempdir()   # FIX: was "/tmp"
     os.environ.setdefault("CREWAI_TELEMETRY_OPT_OUT", "true")
     os.environ["OPENAI_API_KEY"] = "sk-dummy"
     os.environ["GROQ_API_KEY"]   = groq_api_key
@@ -490,15 +546,22 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
     llm      = LLM(model="groq/llama-3.3-70b-versatile")
     llm_fast = LLM(model="groq/llama-3.1-8b-instant")
 
+    # ── WEB SEARCH ───────────────────────────────────────────────────────────
+    print("\nWeb search: fetching real-world context...")
+    sources = search_web_context(startup_idea)
+    print(f"  Sources collected — market:{len(sources.get('market',[]))}, "
+          f"competitors:{len(sources.get('competitors',[]))}, "
+          f"funding:{len(sources.get('funding',[]))}")
+
     # ── ROUND 1: Market + Competitor + Funding in PARALLEL ───────────────────
     print("\nRound 1: Parallel — market, competitor, funding...")
     results = {}
 
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {
-            executor.submit(_run_market,     startup_idea, llm):           "market",
-            executor.submit(_run_competitor, startup_idea, llm):           "competitors",
-            executor.submit(_run_funding,    startup_idea, llm_fast):      "funding",
+            executor.submit(_run_market,     startup_idea, llm,      sources.get("market")):      "market",
+            executor.submit(_run_competitor, startup_idea, llm,      sources.get("competitors")): "competitors",
+            executor.submit(_run_funding,    startup_idea, llm_fast, sources.get("funding")):     "funding",
         }
         for future in as_completed(futures):
             key = futures[future]
@@ -514,14 +577,14 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
     fund_raw   = results.get("funding",     "")
 
     # ── COOLDOWN ──────────────────────────────────────────────────────────────
-    print("\nCooldown: 30s for token window to reset...")
-    time.sleep(30)
+    print("\nCooldown: 90s for token window to reset...")
+    time.sleep(90)
 
-    # ── ROUND 2: SWOT ─────────────────────────────────────────────────────────
+    # ── ROUND 2: SWOT (direct litellm, bypasses CrewAI/tmp bug) ──────────────
     print("\nRound 2: SWOT analysis...")
     swot_raw = ""
     try:
-        swot_raw = _run_swot(startup_idea, llm, market_raw, comp_raw)
+        swot_raw = _run_swot(startup_idea, llm_fast, market_raw, comp_raw)
         print("  SWOT complete")
     except Exception as e:
         print(f"  SWOT failed: {e}")
@@ -540,8 +603,10 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
 
     print("\nAll analysis complete!")
 
-    # ── Parse + validate — _ensure_* fills missing keys so frontend never
-    #    gets a bare {} that triggers the <Empty /> fallback ──────────────────
+    # ── debug: print swot result so you can verify in terminal ───────────────
+    swot_parsed = _extract_json(swot_raw)
+    print(f"\n=== SWOT DEBUG === strengths count: {len(swot_parsed.get('strengths', []))}")
+
     return {
         "startup_idea": startup_idea,
         "market":       _ensure_market(     _extract_json(market_raw)),
@@ -549,4 +614,5 @@ def run_analysis(startup_idea: str, groq_api_key: str) -> dict:
         "funding":      _ensure_funding(    _extract_json(fund_raw)),
         "swot":         _ensure_swot(       _extract_json(swot_raw)),
         "gtm":          _ensure_gtm(        _extract_json(gtm_raw)),
+        "sources":      sources,
     }
