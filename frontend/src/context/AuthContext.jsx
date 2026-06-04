@@ -15,13 +15,13 @@ export const AuthProvider = ({ children }) => {
   });
   const [token, setToken] = useState(localStorage.getItem("auth_token"));
 
-  // BUG FIX (loading): only show the loading screen if we actually need to verify
-  // something — a stored token OR a Google OAuth callback token in the URL.
-  // Without this, every first visit shows a loading spinner before the landing page.
+  // `loading` is only true for the Google OAuth callback, where we don't have
+  // user data yet and must wait for /auth/me. For a stored token we already have
+  // the user in localStorage (initialised above), so we render immediately and
+  // verify the token silently in the background — no spinner needed.
   const [loading, setLoading] = useState(() => {
-    const hasStoredToken = !!localStorage.getItem("auth_token");
     const params = new URLSearchParams(window.location.search);
-    return hasStoredToken || !!params.get("token");
+    return !!params.get("token");
   });
 
   // On mount: handle Google OAuth callback first, then verify any stored token.
@@ -85,8 +85,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const verifyStoredToken = async () => {
-    // Abort after 5 s so the loading screen never hangs indefinitely when the
-    // backend is temporarily unreachable.
+    // Runs silently in the background — never touches `loading` because the UI
+    // already rendered with cached localStorage data. Abort after 5 s so an
+    // unreachable backend doesn't hold a stale session open indefinitely.
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 5000);
     try {
@@ -105,9 +106,8 @@ export const AuthProvider = ({ children }) => {
     } catch {
       clearTimeout(timeoutId);
       _clearSession();
-    } finally {
-      setLoading(false);
     }
+    // No setLoading here — loading was already false when this function ran.
   };
 
   const _clearSession = () => {
