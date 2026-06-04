@@ -385,16 +385,16 @@ async def google_callback(
 ):
     """Handle Google's redirect, issue a JWT, send the user back to the frontend."""
     if error:
-        return RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?error=cancelled")
+        return RedirectResponse(f"{FRONTEND_URL}/?error=cancelled")
 
     # Verify CSRF state
     cookie_state = request.cookies.get("oauth_state")
     if not cookie_state or cookie_state != state:
-        return RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?error=invalid_state")
+        return RedirectResponse(f"{FRONTEND_URL}/?error=invalid_state")
     try:
         _state_signer.loads(state, max_age=600)
     except (BadSignature, SignatureExpired):
-        return RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?error=expired_state")
+        return RedirectResponse(f"{FRONTEND_URL}/?error=expired_state")
 
     # Exchange code for access token
     token_resp = http_requests.post(
@@ -409,7 +409,7 @@ async def google_callback(
         timeout=10,
     )
     if token_resp.status_code != 200:
-        return RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?error=token_exchange_failed")
+        return RedirectResponse(f"{FRONTEND_URL}/?error=token_exchange_failed")
 
     access_token = token_resp.json().get("access_token")
 
@@ -420,7 +420,7 @@ async def google_callback(
         timeout=10,
     )
     if info_resp.status_code != 200:
-        return RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?error=userinfo_failed")
+        return RedirectResponse(f"{FRONTEND_URL}/?error=userinfo_failed")
 
     info       = info_resp.json()
     email      = info.get("email", "")
@@ -431,7 +431,7 @@ async def google_callback(
     # Conflict: email already registered with OTP
     existing = db.query(User).filter(User.email == email).first()
     if existing and getattr(existing, "auth_method", "otp") == "otp":
-        return RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?error=otp_conflict")
+        return RedirectResponse(f"{FRONTEND_URL}/?error=otp_conflict")
 
     # Find or create Google user
     user = get_user_by_google_id(db, google_id)
@@ -451,7 +451,7 @@ async def google_callback(
         "avatar_url":  user.avatar_url,
     })
 
-    resp = RedirectResponse(f"{FRONTEND_URL}/auth/google/callback?token={jwt_token}")
+    resp = RedirectResponse(f"{FRONTEND_URL}/?token={jwt_token}")
     resp.delete_cookie("oauth_state")
     return resp
 

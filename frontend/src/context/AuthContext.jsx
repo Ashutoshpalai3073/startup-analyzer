@@ -5,7 +5,6 @@ const API = () => process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 export const AuthProvider = ({ children }) => {
   // Initialise user from localStorage so the name shows immediately on page load
-  // (before verify-token round-trip completes)
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem("auth_user");
@@ -14,25 +13,36 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
-  const [token, setToken]     = useState(localStorage.getItem("auth_token"));
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem("auth_token"));
 
-  // On mount: handle Google OAuth callback first, then verify any stored token
-  useEffect(() => {
-    const path   = window.location.pathname;
+  // BUG FIX (loading): only show the loading screen if we actually need to verify
+  // something — a stored token OR a Google OAuth callback token in the URL.
+  // Without this, every first visit shows a loading spinner before the landing page.
+  const [loading, setLoading] = useState(() => {
+    const hasStoredToken = !!localStorage.getItem("auth_token");
     const params = new URLSearchParams(window.location.search);
+    return hasStoredToken || !!params.get("token");
+  });
 
-    if (path === "/auth/google/callback") {
-      const googleToken = params.get("token");
-      const googleError = params.get("error");
+  // On mount: handle Google OAuth callback first, then verify any stored token.
+  // BUG FIX (Google loop): the old code checked window.location.pathname ===
+  // "/auth/google/callback". Most servers don't rewrite deep paths to index.html,
+  // so Google's redirect hit a 404 and the React app never loaded. The backend now
+  // redirects to /?token=xxx (root path always works), and we detect the token
+  // from URL query params here — path-independent.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleToken = params.get("token");
+    const googleError = params.get("error");
+
+    if (googleToken || googleError) {
       // Clean the URL so the user never sees the token in the address bar
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", window.location.pathname);
 
       if (googleToken) {
         verifyGoogleToken(googleToken);
       } else {
         if (googleError === "otp_conflict") {
-          // Surface this via localStorage so App.jsx can pick it up if needed
           localStorage.setItem(
             "auth_error",
             "This email is already registered with OTP login. Please use OTP to log in."
@@ -63,9 +73,11 @@ export const AuthProvider = ({ children }) => {
         setToken(googleToken);
         setUser(data);
       } else {
+        console.error("[Google OAuth] /auth/me rejected:", res.status);
         _clearSession();
       }
-    } catch {
+    } catch (err) {
+      console.error("[Google OAuth] network error:", err);
       _clearSession();
     } finally {
       setLoading(false);
@@ -73,10 +85,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const verifyStoredToken = async () => {
+    // Abort after 5 s so the loading screen never hangs indefinitely when the
+    // backend is temporarily unreachable.
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 5000);
     try {
       const res = await fetch(`${API()}/auth/me`, {
         headers: { "Authorization": `Bearer ${token}` },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem("auth_user", JSON.stringify(data));
@@ -85,6 +103,7 @@ export const AuthProvider = ({ children }) => {
         _clearSession();
       }
     } catch {
+      clearTimeout(timeoutId);
       _clearSession();
     } finally {
       setLoading(false);
@@ -99,6 +118,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ── Sign Up ───────────────────────────────────────────────────────
+  // BUG FIX (signup 400): wrapped res.json() in try/catch so a non-JSON error
+  // response (e.g. HTML 500 page) doesn't mask the real error with an unrelated
+  // "SyntaxError: Unexpected token" instead of the backend's detail message.
   const signup = async (email, name) => {
     const res = await fetch(`${API()}/auth/signup`, {
       method: "POST",
@@ -106,9 +128,16 @@ export const AuthProvider = ({ children }) => {
       body: JSON.stringify({ email, name }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      const error = new Error(err.detail || "Sign up failed");
-      error.status = res.status; // attach HTTP status so callers can detect 409 (Case A)
+      let errDetail = "Sign up failed";
+      try {
+        const err = await res.json();
+        errDetail = err.detail || errDetail;
+      } catch {
+        // response body was not JSON — keep the generic message
+      }
+      console.error("[signup] error", res.status, errDetail);
+      const error = new Error(errDetail);
+      error.status = res.status;
       throw error;
     }
     return res.json();
@@ -159,18 +188,29 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ── Delete Account: wipes entire user record from DB ─────────────────
+  // BUG FIX (delete 401): prefer the live `token` state over localStorage so
+  // the request always carries the current JWT even if localStorage was
+  // partially cleared. Added null-guard so we never send "Bearer null".
   const deleteAccount = async () => {
-    const currentToken = localStorage.getItem("auth_token");
+    const currentToken = token || localStorage.getItem("auth_token");
+    if (!currentToken) {
+      _clearSession();
+      return;
+    }
     try {
-      await fetch(`${API()}/auth/delete-account`, {
+      const res = await fetch(`${API()}/auth/delete-account`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${currentToken}`,
         },
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("[deleteAccount] server error:", res.status, err.detail || "");
+      }
     } catch (err) {
-      console.error("Delete account error:", err);
+      console.error("[deleteAccount] network error:", err);
     } finally {
       _clearSession();
     }
