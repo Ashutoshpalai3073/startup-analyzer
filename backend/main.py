@@ -39,13 +39,31 @@ _state_signer        = URLSafeTimedSerializer(
 
 app = FastAPI(title="Drusti — Startup Analyzer API")
 
+# ─── CORS ─────────────────────────────────────────────────────────────
+# FIX: allow_origins=["*"] together with allow_credentials=True is invalid
+# per the CORS spec (browsers reject the combination) and exposes the API to
+# any origin. Lock to the known frontend origins instead. Extra origins can be
+# added via the CORS_EXTRA_ORIGINS env var (comma-separated).
+_allowed_origins = {
+    FRONTEND_URL,
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://drusti.vercel.app",
+}
+for extra in os.getenv("CORS_EXTRA_ORIGINS", "").split(","):
+    extra = extra.strip()
+    if extra:
+        _allowed_origins.add(extra)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=sorted(_allowed_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+MAX_IDEA_LENGTH = 600  # characters — guards against prompt-bloating essays
 
 
 # ─── Viability Score ──────────────────────────────────────────────────
@@ -502,17 +520,38 @@ async def analyze(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # FIX: validate the idea before spending any Tavily credit / Groq token
+    idea = (request.startup_idea or "").strip()
+    if not idea:
+        raise HTTPException(status_code=400, detail="Please enter a startup idea.")
+    if len(idea) > MAX_IDEA_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Idea is too long (max {MAX_IDEA_LENGTH} characters). Please summarize it.",
+        )
+
     groq_api_key = os.getenv("GROQ_API_KEY")
     if not groq_api_key:
         raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+
     try:
-        result = run_analysis(request.startup_idea, groq_api_key)
-        score  = calculate_viability_score(result)
+        result = run_analysis(idea, groq_api_key)
+
+        # FIX: move engine-internal flags into a clean meta block for the frontend
+        meta = {
+            "cached":         bool(result.pop("_cached", False)),
+            "cache_age_days": result.pop("_cache_age_days", None),
+            "data_quality":   result.get("data_quality", {}),
+            "industry":       (result.get("profile") or {}).get("industry", ""),
+        }
+        result["meta"] = meta
+
+        score = calculate_viability_score(result)
         result["viability_score"] = score
 
         saved = SavedAnalysis(
             user_id         = current_user.id,
-            startup_idea    = request.startup_idea,
+            startup_idea    = idea,
             analysis_json   = json.dumps(result),
             viability_score = score["total"],
         )
@@ -521,6 +560,8 @@ async def analyze(
         db.refresh(saved)
         result["analysis_id"] = saved.id
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

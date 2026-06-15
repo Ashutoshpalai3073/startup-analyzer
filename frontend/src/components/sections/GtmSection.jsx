@@ -254,6 +254,7 @@ export default function GtmSection({ data={} }) {
         <div style={{
           display:"grid",
           gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(5,1fr)",
+          alignItems:"stretch",
           gap:"0.65rem",
         }}>
           {phases.map((ph,i) => (
@@ -267,6 +268,8 @@ export default function GtmSection({ data={} }) {
                 borderTop:`3px solid ${PHASE_COLORS[i%5]}`,
                 borderRadius:12, padding:"0.9rem 0.85rem",
                 cursor:"default", transition:"all 0.3s ease",
+                display:"flex", flexDirection:"column", height:"100%", gap:"0.5rem",
+                minWidth:0, overflow:"hidden",
               }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"0.4rem" }}>
                 <span style={{ color:PHASE_COLORS[i%5], fontWeight:800, fontSize:"0.78rem" }}>P{ph.phase}</span>
@@ -275,20 +278,22 @@ export default function GtmSection({ data={} }) {
               <div style={{ color:"#e2e8f0", fontWeight:700, fontSize:"0.82rem",
                 marginBottom:"0.6rem", lineHeight:1.3 }}>{ph.title}</div>
               <div style={{ height:1, background:`rgba(${hexRgb(PHASE_COLORS[i%5])},0.15)`, marginBottom:"0.5rem" }} />
-              <div style={{ marginBottom:"0.5rem" }}>
+              <div>
                 <div style={{ color:PHASE_COLORS[i%5], fontSize:"0.6rem", fontWeight:700,
                   textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.25rem" }}>Goals</div>
                 {(ph.goals||[]).map((g,j) => (
                   <div key={j} style={{ color:"#475569", fontSize:"0.72rem",
-                    marginBottom:"0.18rem", lineHeight:1.35 }}>• {g}</div>
+                    marginBottom:"0.18rem", lineHeight:1.35,
+                    whiteSpace:"nowrap", overflow:"hidden", width:"100%" }}>• {g}</div>
                 ))}
               </div>
-              <div style={{ marginBottom:"0.5rem" }}>
+              <div>
                 <div style={{ color:"#10b981", fontSize:"0.6rem", fontWeight:700,
                   textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.25rem" }}>Metrics</div>
                 {(ph.metrics||[]).map((m,j) => (
                   <div key={j} style={{ color:"#374151", fontSize:"0.7rem",
-                    marginBottom:"0.18rem", lineHeight:1.35 }}>• {m}</div>
+                    marginBottom:"0.18rem", lineHeight:1.35,
+                    whiteSpace:"nowrap", overflow:"hidden", width:"100%" }}>• {m}</div>
                 ))}
               </div>
               {ph.activities && ph.activities.length > 0 && (
@@ -297,7 +302,8 @@ export default function GtmSection({ data={} }) {
                     textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.25rem" }}>Activities</div>
                   {(ph.activities||[]).map((a,j) => (
                     <div key={j} style={{ color:"#374151", fontSize:"0.68rem",
-                      marginBottom:"0.15rem", lineHeight:1.35 }}>• {a}</div>
+                      marginBottom:"0.15rem", lineHeight:1.35,
+                      whiteSpace:"nowrap", overflow:"hidden", width:"100%" }}>• {a}</div>
                   ))}
                 </div>
               )}

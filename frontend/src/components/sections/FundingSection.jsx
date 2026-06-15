@@ -198,15 +198,22 @@ export default function FundingSection({ data={} }) {
         </Card>
       </div>
 
-      {/* VCs + metrics + recommendation — responsive grid */}
+      {/* VCs + metrics + recommendation — responsive grid, all cards stretch to same height */}
       <div style={{
         display:"grid",
-        gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "1fr 1fr 1fr",
+        gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "1.1fr 0.95fr 0.95fr",
         gap:"1.25rem",
+        alignItems:"stretch",
       }}>
-        <Card>
+        {/* Active VCs — 2-col mini-grid so height matches neighbours */}
+        <Card style={{ display:"flex", flexDirection:"column" }}>
           <h3 style={H3}>Active VCs in This Space</h3>
-          <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+          <div style={{
+            display:"grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap:"0.55rem",
+            flex:1,
+          }}>
             {vcs.map((vc,i) => (
               <motion.div key={i}
                 initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
@@ -214,79 +221,111 @@ export default function FundingSection({ data={} }) {
                 style={{
                   background:"rgba(99,102,241,0.05)",
                   border:"1px solid rgba(99,102,241,0.1)",
-                  borderRadius:10, padding:"0.8rem",
+                  borderRadius:10, padding:"0.65rem 0.75rem",
+                  display:"flex", flexDirection:"column", gap:"0.3rem",
                 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"0.3rem", gap:"0.5rem", flexWrap:"wrap" }}>
-                  <span style={{ color:"#6366f1", fontWeight:700, fontSize:"0.85rem" }}>{vc.name}</span>
+                <div style={{ display:"flex", flexDirection:"column", gap:"0.25rem" }}>
+                  <span style={{ color:"#6366f1", fontWeight:700, fontSize:"0.8rem", lineHeight:1.3 }}>{vc.name}</span>
                   <span style={{
                     background:"rgba(16,185,129,0.1)", color:"#10b981",
-                    fontSize:"0.68rem", fontWeight:700,
-                    borderRadius:6, padding:"0.1rem 0.45rem", whiteSpace:"nowrap",
+                    fontSize:"0.65rem", fontWeight:700,
+                    borderRadius:6, padding:"0.08rem 0.4rem", whiteSpace:"nowrap",
+                    alignSelf:"flex-start",
                   }}>{vc.check_size}</span>
                 </div>
-                <div style={{ color:"#475569", fontSize:"0.75rem", lineHeight:1.5 }}>{vc.thesis}</div>
+                <div style={{
+                  color:"#475569", fontSize:"0.7rem", lineHeight:1.45,
+                  display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden",
+                }}>{vc.thesis}</div>
+                <div style={{
+                  color:"#374151", fontSize:"0.62rem",
+                  textTransform:"uppercase", letterSpacing:"0.06em",
+                }}>{vc.stage}</div>
               </motion.div>
             ))}
           </div>
         </Card>
 
-        <Card>
+        {/* Key Investor Metrics — fills full height */}
+        <Card style={{ display:"flex", flexDirection:"column" }}>
           <h3 style={H3}>Key Investor Metrics</h3>
-          <div style={{ display:"flex", flexDirection:"column", gap:"0" }}>
-            {Object.entries(metrics).map(([k,v],i) => (
-              <div key={k} style={{
-                display:"flex", justifyContent:"space-between", alignItems:"center",
-                padding:"0.6rem 0",
-                borderBottom:"1px solid rgba(255,255,255,0.04)",
-                gap:"0.5rem",
-              }}>
-                <span style={{
-                  color:"#374151", fontSize:"0.72rem",
-                  textTransform:"uppercase", letterSpacing:"0.07em",
-                }}>{k.replace(/_/g," ")}</span>
-                <span style={{ color:"#c7d2fe", fontSize:"0.82rem", fontWeight:600, textAlign:"right" }}>{v}</span>
-              </div>
-            ))}
-          </div>
-
-          {rounds[0] && (
-            <div style={{
-              marginTop:"1rem", padding:"0.75rem",
-              background:"rgba(99,102,241,0.06)",
-              borderRadius:9, border:"1px solid rgba(99,102,241,0.12)",
-            }}>
-              <div style={{ color:"#374151", fontSize:"0.68rem", textTransform:"uppercase",
-                letterSpacing:"0.08em", marginBottom:"0.25rem" }}>Top Lead Investor</div>
-              <div style={{ color:"#a5b4fc", fontWeight:700 }}>{rounds[0].investor}</div>
-              <div style={{ color:"#374151", fontSize:"0.72rem" }}>{rounds[0].company} · {rounds[0].stage}</div>
+          <div style={{ display:"flex", flexDirection:"column", flex:1, justifyContent:"space-between" }}>
+            <div>
+              {Object.entries(metrics).map(([k,v],i) => (
+                <div key={k} style={{
+                  display:"flex", justifyContent:"space-between", alignItems:"center",
+                  padding:"0.65rem 0",
+                  borderBottom:"1px solid rgba(255,255,255,0.04)",
+                  gap:"0.5rem",
+                }}>
+                  <span style={{
+                    color:"#374151", fontSize:"0.72rem",
+                    textTransform:"uppercase", letterSpacing:"0.07em",
+                  }}>{k.replace(/_/g," ")}</span>
+                  <span style={{ color:"#c7d2fe", fontSize:"0.82rem", fontWeight:600, textAlign:"right" }}>{v}</span>
+                </div>
+              ))}
             </div>
-          )}
+
+            {rounds[0] && (
+              <div style={{
+                marginTop:"1rem", padding:"0.85rem",
+                background:"rgba(99,102,241,0.06)",
+                borderRadius:9, border:"1px solid rgba(99,102,241,0.12)",
+              }}>
+                <div style={{ color:"#374151", fontSize:"0.68rem", textTransform:"uppercase",
+                  letterSpacing:"0.08em", marginBottom:"0.3rem" }}>Top Lead Investor</div>
+                <div style={{ color:"#a5b4fc", fontWeight:700, fontSize:"0.9rem" }}>{rounds[0].investor}</div>
+                <div style={{ color:"#374151", fontSize:"0.72rem", marginTop:"0.15rem" }}>
+                  {rounds[0].company} · {rounds[0].stage}
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
 
-        <Card glow color="#f59e0b">
+        {/* Fundraising Recommendation — fills full height */}
+        <Card glow color="#f59e0b" style={{ display:"flex", flexDirection:"column" }}>
           <h3 style={{ ...H3, color:"#f59e0b" }}>Fundraising Recommendation</h3>
-          <div style={{
-            background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)",
-            borderRadius:10, padding:"0.85rem", marginBottom:"1rem",
-          }}>
-            <div style={{ color:"#f59e0b", fontWeight:900, fontSize:"1.25rem", lineHeight:1 }}>
-              {rec.ideal_stage}
+          <div style={{ display:"flex", flexDirection:"column", flex:1, justifyContent:"space-between" }}>
+            <div>
+              <div style={{
+                background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)",
+                borderRadius:10, padding:"1rem", marginBottom:"1rem",
+              }}>
+                <div style={{ color:"#f59e0b", fontWeight:900, fontSize:"1.35rem", lineHeight:1 }}>
+                  {rec.ideal_stage}
+                </div>
+                <div style={{ color:"#fde68a", fontWeight:700, fontSize:"1.05rem", marginTop:"0.3rem" }}>
+                  {rec.round_size}
+                </div>
+              </div>
+
+              <div style={{ color:"#374151", fontSize:"0.68rem", textTransform:"uppercase",
+                letterSpacing:"0.08em", marginBottom:"0.55rem" }}>Top VCs to approach</div>
+              {(rec.top_vcs||[]).map((v,i) => (
+                <div key={i} style={{
+                  color:"#fde68a", fontSize:"0.82rem", marginBottom:"0.45rem",
+                  paddingLeft:"0.75rem", borderLeft:"2px solid rgba(245,158,11,0.4)",
+                  lineHeight:1.55,
+                }}>
+                  {v}
+                </div>
+              ))}
             </div>
-            <div style={{ color:"#fde68a", fontWeight:700, fontSize:"1rem", marginTop:"0.2rem" }}>
-              {rec.round_size}
+
+            {/* Bottom note to fill remaining space */}
+            <div style={{
+              marginTop:"1rem", padding:"0.7rem 0.85rem",
+              background:"rgba(245,158,11,0.04)",
+              border:"1px solid rgba(245,158,11,0.1)",
+              borderRadius:8,
+            }}>
+              <div style={{ color:"#92400e", fontSize:"0.7rem", lineHeight:1.5 }}>
+                Approach recommended VCs with a warm intro from your network for best conversion rates.
+              </div>
             </div>
           </div>
-          <div style={{ color:"#374151", fontSize:"0.68rem", textTransform:"uppercase",
-            letterSpacing:"0.08em", marginBottom:"0.5rem" }}>Top VCs to approach</div>
-          {(rec.top_vcs||[]).map((v,i) => (
-            <div key={i} style={{
-              color:"#fde68a", fontSize:"0.82rem", marginBottom:"0.35rem",
-              paddingLeft:"0.6rem", borderLeft:"2px solid rgba(245,158,11,0.4)",
-              lineHeight:1.5,
-            }}>
-              {v}
-            </div>
-          ))}
         </Card>
       </div>
     </div>
