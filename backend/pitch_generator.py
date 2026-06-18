@@ -1,10 +1,42 @@
 import os
+import re
 import tempfile
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
-from pptx.util import Inches, Pt
+
+
+def _int(val, default=0):
+    """Safely coerce any LLM value (string, float, None) to int."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return int(val)
+    # strip currency symbols / commas, e.g. "$600,000" -> 600000
+    cleaned = re.sub(r"[^\d.]", "", str(val))
+    try:
+        return int(float(cleaned)) if cleaned else default
+    except (ValueError, OverflowError):
+        return default
+
+
+def _float(val, default=0.0):
+    """Safely coerce any LLM value to float."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return float(val)
+    cleaned = re.sub(r"[^\d.]", "", str(val))
+    try:
+        return float(cleaned) if cleaned else default
+    except (ValueError, OverflowError):
+        return default
+
+
+def _str(val, default=""):
+    """Return string, never None."""
+    return str(val) if val is not None else default
 
 
 # ── Color palette ─────────────────────────────────────────────────────────────
@@ -118,15 +150,15 @@ def _slide_market(prs, market):
     _add_rect(slide, 0.3, 0.75, 9.4, 0.04, ACCENT)
 
     # TAM SAM SOM boxes
-    tam = market.get("tam", {}).get("value", 0)
-    sam = market.get("sam", {}).get("value", 0)
-    som = market.get("som", {}).get("value", 0)
-    cagr = market.get("cagr", 0)
+    tam  = _float(market.get("tam", {}).get("value", 0))
+    sam  = _float(market.get("sam", {}).get("value", 0))
+    som  = _float(market.get("som", {}).get("value", 0))
+    cagr = _float(market.get("cagr", 0))
 
     for i, (label, val, col) in enumerate([
-        ("TAM", f"${tam}B", ACCENT),
-        ("SAM", f"${sam}B", ACCENT2),
-        ("SOM", f"${som}B", SUCCESS),
+        ("TAM", f"${tam:,.1f}B", ACCENT),
+        ("SAM", f"${sam:,.1f}B", ACCENT2),
+        ("SOM", f"${som:,.1f}B", SUCCESS),
     ]):
         x = 0.3 + i * 3.2
         _add_rect(slide, x, 1.0, 2.9, 1.6, CARD)
@@ -138,7 +170,7 @@ def _slide_market(prs, market):
     _add_rect(slide, 0.3, 2.8, 9.4, 0.04, CARD)
 
     # CAGR + Overview
-    _add_textbox(slide, f"CAGR: {cagr}%", 0.3, 2.95, 3, 0.5,
+    _add_textbox(slide, f"CAGR: {cagr:.1f}%", 0.3, 2.95, 3, 0.5,
                  font_size=18, bold=True, color=WARNING)
     _add_textbox(slide, market.get("overview", ""), 0.3, 3.55, 9.4, 1.0,
                  font_size=11, color=MUTED)
@@ -302,13 +334,13 @@ def _slide_gtm(prs, gtm):
         _add_textbox(slide, goals, x + 0.05, 5.1, 1.65, 0.85,
                      font_size=8, color=MUTED)
 
-    # KPIs
-    kpis = gtm.get("kpis", {})
+    # KPIs — use _int() so string values like "600000" don't crash ,:
+    kpis = gtm.get("kpis", {}) or {}
     _add_textbox(slide,
-                 f"12M Revenue Target: ${kpis.get('revenue_12month', 0):,}  |  "
-                 f"MRR (12M): ${kpis.get('mrr_12month', 0):,}  |  "
-                 f"CAC: ${kpis.get('cac', 0):,}  |  "
-                 f"LTV: ${kpis.get('ltv', 0):,}",
+                 f"12M Revenue: ${_int(kpis.get('revenue_12month')):,}  |  "
+                 f"MRR (12M): ${_int(kpis.get('mrr_12month')):,}  |  "
+                 f"CAC: ${_int(kpis.get('cac')):,}  |  "
+                 f"LTV: ${_int(kpis.get('ltv')):,}",
                  0.3, 6.2, 9.4, 0.5, font_size=11, bold=True, color=WARNING)
 
 

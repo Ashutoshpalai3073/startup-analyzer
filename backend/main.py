@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 import os
+import re
 import json
 import secrets
 from datetime import datetime
@@ -604,15 +605,28 @@ async def get_analysis(
 
 @app.post("/download-pitch")
 async def download_pitch(request: PitchRequest):
+    import io
+    from fastapi.responses import StreamingResponse
+    filepath = None
     try:
         filepath = generate_pitch_deck(request.analysis, request.brand_name)
-        return FileResponse(
-            filepath,
+        with open(filepath, "rb") as f:
+            data = f.read()
+        safe_name = re.sub(r"[^\w\-.]", "_", request.brand_name)
+        return StreamingResponse(
+            io.BytesIO(data),
             media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            filename=f"{request.brand_name.replace(' ', '_')}_pitch_deck.pptx",
+            headers={"Content-Disposition": f'attachment; filename="{safe_name}_pitch_deck.pptx"'},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Always clean up the temp file
+        if filepath and os.path.exists(filepath):
+            try:
+                os.unlink(filepath)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
